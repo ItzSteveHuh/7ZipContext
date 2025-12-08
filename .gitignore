@@ -45,3 +45,4 @@ Makefile
 *~
 .idea/
 .cache/*
+.claude/settings.local.json
