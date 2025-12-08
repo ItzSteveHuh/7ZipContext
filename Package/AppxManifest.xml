@@ -57,6 +57,9 @@
             <desktop5:ItemType Type="*">
               <desktop5:Verb Id="7ZipContext" Clsid="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" />
             </desktop5:ItemType>
+            <desktop5:ItemType Type="Directory">
+              <desktop5:Verb Id="7ZipContextDir" Clsid="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" />
+            </desktop5:ItemType>
           </desktop4:FileExplorerContextMenus>
         </desktop4:Extension>
       </Extensions>

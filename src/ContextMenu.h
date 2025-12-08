@@ -32,6 +32,10 @@ struct LocalizedStrings {
     const wchar_t* overwriteMessage;
     const wchar_t* passwordTitle;
     const wchar_t* passwordMessage;
+    const wchar_t* passwordPromptTitle;
+    const wchar_t* passwordPromptMessage;
+    const wchar_t* passwordWrongTitle;
+    const wchar_t* passwordWrongMessage;
 };
 
 // Get system language and return appropriate strings
@@ -75,14 +79,15 @@ private:
     CommandType m_type;
     ULONG m_enumIndex;
     std::vector<IExplorerCommand*> m_subCommands;
-    std::wstring m_selectedPath;
+    std::vector<std::wstring> m_selectedPaths;
     bool m_isArchive;
+    bool m_isDirectory;
 
     void InitSubCommands();
     void GetSelectedItems(IShellItemArray* psiItemArray);
     bool IsArchiveFile(const std::wstring& path);
     bool ExtractArchive(const std::wstring& archivePath, const std::wstring& outDir);
-    bool CompressFiles(const std::wstring& srcPath, const std::wstring& archivePath, const GUID& formatId);
+    bool CompressFiles(const std::vector<std::wstring>& srcPaths, const std::wstring& archivePath, const GUID& formatId);
 };
 
 // Class factory

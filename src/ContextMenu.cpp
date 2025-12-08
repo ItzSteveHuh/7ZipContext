@@ -117,7 +117,11 @@ static const LocalizedStrings g_stringsEN = {
     .overwriteTitle = L"Confirm Overwrite",
     .overwriteMessage = L"Files already exist in the destination. Overwrite?",
     .passwordTitle = L"Extraction Complete",
-    .passwordMessage = L"Archive extracted successfully.\n\nPassword used: %s\n\nYou can copy this password for future use."
+    .passwordMessage = L"Archive extracted successfully.\n\nPassword used: %s\n\nYou can copy this password for future use.",
+    .passwordPromptTitle = L"Password Required",
+    .passwordPromptMessage = L"Enter password for encrypted archive:",
+    .passwordWrongTitle = L"Wrong Password",
+    .passwordWrongMessage = L"The password is incorrect. Try again?"
 };
 
 static const LocalizedStrings g_stringsCN = {
@@ -128,7 +132,11 @@ static const LocalizedStrings g_stringsCN = {
     .overwriteTitle = L"\x786E\x8BA4\x8986\x76D6",              // 确认覆盖
     .overwriteMessage = L"\x76EE\x6807\x4F4D\x7F6E\x5DF2\x5B58\x5728\x6587\x4EF6\x3002\x662F\x5426\x8986\x76D6\xFF1F", // 目标位置已存在文件。是否覆盖？
     .passwordTitle = L"\x89E3\x538B\x5B8C\x6210",               // 解压完成
-    .passwordMessage = L"\x538B\x7F29\x5305\x89E3\x538B\x6210\x529F\x3002\n\n\x4F7F\x7528\x7684\x5BC6\x7801: %s\n\n\x60A8\x53EF\x4EE5\x590D\x5236\x6B64\x5BC6\x7801\x4EE5\x4FBF\x4E0B\x6B21\x4F7F\x7528\x3002" // 压缩包解压成功。\n\n使用的密码: %s\n\n您可以复制此密码以便下次使用。
+    .passwordMessage = L"\x538B\x7F29\x5305\x89E3\x538B\x6210\x529F\x3002\n\n\x4F7F\x7528\x7684\x5BC6\x7801: %s\n\n\x60A8\x53EF\x4EE5\x590D\x5236\x6B64\x5BC6\x7801\x4EE5\x4FBF\x4E0B\x6B21\x4F7F\x7528\x3002", // 压缩包解压成功。\n\n使用的密码: %s\n\n您可以复制此密码以便下次使用。
+    .passwordPromptTitle = L"\x9700\x8981\x5BC6\x7801",         // 需要密码
+    .passwordPromptMessage = L"\x8BF7\x8F93\x5165\x52A0\x5BC6\x538B\x7F29\x5305\x7684\x5BC6\x7801:", // 请输入加密压缩包的密码:
+    .passwordWrongTitle = L"\x5BC6\x7801\x9519\x8BEF",          // 密码错误
+    .passwordWrongMessage = L"\x5BC6\x7801\x4E0D\x6B63\x786E\x3002\x662F\x5426\x91CD\x8BD5\xFF1F" // 密码不正确。是否重试？
 };
 
 bool IsChineseLocale()
@@ -160,29 +168,29 @@ const PROPID kpidSize = 7;
 const PROPID kpidAttrib = 9;
 const PROPID kpidMTime = 14;
 
-// 7-Zip interfaces
-MIDL_INTERFACE("23170F69-40C1-278A-0000-000600100000")
+// 7-Zip interfaces - Stream namespace (0003)
+MIDL_INTERFACE("23170F69-40C1-278A-0000-000300010000")
 ISequentialInStream : public IUnknown
 {
 public:
     virtual HRESULT STDMETHODCALLTYPE Read(void *data, UINT32 size, UINT32 *processedSize) = 0;
 };
 
-MIDL_INTERFACE("23170F69-40C1-278A-0000-000600200000")
+MIDL_INTERFACE("23170F69-40C1-278A-0000-000300020000")
 ISequentialOutStream : public IUnknown
 {
 public:
     virtual HRESULT STDMETHODCALLTYPE Write(const void *data, UINT32 size, UINT32 *processedSize) = 0;
 };
 
-MIDL_INTERFACE("23170F69-40C1-278A-0000-000600030000")
+MIDL_INTERFACE("23170F69-40C1-278A-0000-000300030000")
 IInStream : public ISequentialInStream
 {
 public:
     virtual HRESULT STDMETHODCALLTYPE Seek(INT64 offset, UINT32 seekOrigin, UINT64 *newPosition) = 0;
 };
 
-MIDL_INTERFACE("23170F69-40C1-278A-0000-000600040000")
+MIDL_INTERFACE("23170F69-40C1-278A-0000-000300040000")
 IOutStream : public ISequentialOutStream
 {
 public:
@@ -564,21 +572,78 @@ private:
 };
 
 // Update callback implementation for compression
-class CUpdateCallback : public IArchiveUpdateCallback
+// IProgress interface for 7z format
+
+// Helper: Get file name without path (forward declaration for CUpdateCallback)
+static std::wstring GetFileNameFromPath(const std::wstring& path)
+{
+    size_t pos = path.rfind(L'\\');
+    return (pos != std::wstring::npos) ? path.substr(pos + 1) : path;
+}
+
+MIDL_INTERFACE("23170F69-40C1-278A-0000-000000050000")
+IProgress : public IUnknown
 {
 public:
-    CUpdateCallback(const std::wstring& srcPath, const std::wstring& itemName)
-        : m_refCount(1), m_srcPath(srcPath), m_itemName(itemName), m_isDir(false) {
-        DWORD attrs = GetFileAttributesW(srcPath.c_str());
-        m_isDir = (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY));
-        if (m_isDir) {
-            EnumerateFiles(srcPath, L"");
+    virtual HRESULT STDMETHODCALLTYPE SetTotal(UINT64 total) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetCompleted(const UINT64 *completeValue) = 0;
+};
+
+// ISetProperties interface for setting compression properties
+MIDL_INTERFACE("23170F69-40C1-278A-0000-000600030000")
+ISetProperties : public IUnknown
+{
+public:
+    virtual HRESULT STDMETHODCALLTYPE SetProperties(const wchar_t * const *names, const PROPVARIANT *values, UINT32 numProps) = 0;
+};
+
+// Define the ISetProperties GUID explicitly
+DEFINE_GUID(IID_ISetProperties, 0x23170F69, 0x40C1, 0x278A, 0x00, 0x00, 0x00, 0x06, 0x00, 0x03, 0x00, 0x00);
+
+class CUpdateCallback : public IArchiveUpdateCallback, public IProgress
+{
+public:
+    CUpdateCallback(const std::vector<std::wstring>& srcPaths)
+        : m_refCount(1) {
+        // Process each source path
+        for (const auto& srcPath : srcPaths) {
+            std::wstring itemName = GetFileNameFromPath(srcPath);
+            DWORD attrs = GetFileAttributesW(srcPath.c_str());
+            bool isDir = (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY));
+
+            if (isDir) {
+                // Add directory itself first
+                FileItem dirItem;
+                dirItem.fullPath = srcPath;
+                dirItem.relativePath = itemName;
+                dirItem.isDir = true;
+                m_files.push_back(dirItem);
+                // Then enumerate contents
+                EnumerateFiles(srcPath, itemName);
+            } else {
+                // Single file
+                FileItem item;
+                item.fullPath = srcPath;
+                item.relativePath = itemName;
+                item.isDir = false;
+                m_files.push_back(item);
+            }
         }
     }
 
     STDMETHOD(QueryInterface)(REFIID riid, void** ppv) {
-        if (riid == IID_IUnknown || riid == __uuidof(IArchiveUpdateCallback)) {
-            *ppv = this;
+        if (riid == IID_IUnknown) {
+            *ppv = static_cast<IArchiveUpdateCallback*>(this);
+            AddRef();
+            return S_OK;
+        }
+        if (riid == __uuidof(IArchiveUpdateCallback)) {
+            *ppv = static_cast<IArchiveUpdateCallback*>(this);
+            AddRef();
+            return S_OK;
+        }
+        if (riid == __uuidof(IProgress)) {
+            *ppv = static_cast<IProgress*>(this);
             AddRef();
             return S_OK;
         }
@@ -592,6 +657,7 @@ public:
         return ref;
     }
 
+    // IProgress
     STDMETHOD(SetTotal)(UINT64 total) { return S_OK; }
     STDMETHOD(SetCompleted)(const UINT64* completeValue) { return S_OK; }
 
@@ -605,35 +671,24 @@ public:
     STDMETHOD(GetProperty)(UINT32 index, PROPID propID, PROPVARIANT* value) {
         PropVariantInit(value);
 
-        std::wstring itemPath;
-        bool itemIsDir = false;
-        std::wstring fullPath;
+        if (index >= m_files.size()) return E_INVALIDARG;
 
-        if (m_isDir) {
-            if (index >= m_files.size()) return E_INVALIDARG;
-            itemPath = m_files[index].relativePath;
-            itemIsDir = m_files[index].isDir;
-            fullPath = m_files[index].fullPath;
-        } else {
-            itemPath = m_itemName;
-            itemIsDir = false;
-            fullPath = m_srcPath;
-        }
+        const FileItem& item = m_files[index];
 
         WIN32_FILE_ATTRIBUTE_DATA fad = {};
-        GetFileAttributesExW(fullPath.c_str(), GetFileExInfoStandard, &fad);
+        GetFileAttributesExW(item.fullPath.c_str(), GetFileExInfoStandard, &fad);
 
         switch (propID) {
             case kpidPath:
                 value->vt = VT_BSTR;
-                value->bstrVal = SysAllocString(itemPath.c_str());
+                value->bstrVal = SysAllocString(item.relativePath.c_str());
                 break;
             case kpidIsDir:
                 value->vt = VT_BOOL;
-                value->boolVal = itemIsDir ? VARIANT_TRUE : VARIANT_FALSE;
+                value->boolVal = item.isDir ? VARIANT_TRUE : VARIANT_FALSE;
                 break;
             case kpidSize:
-                if (!itemIsDir) {
+                if (!item.isDir) {
                     value->vt = VT_UI8;
                     value->uhVal.LowPart = fad.nFileSizeLow;
                     value->uhVal.HighPart = fad.nFileSizeHigh;
@@ -654,22 +709,13 @@ public:
     STDMETHOD(GetStream)(UINT32 index, ISequentialInStream** inStream) {
         *inStream = NULL;
 
-        std::wstring fullPath;
-        bool itemIsDir;
+        if (index >= m_files.size()) return E_INVALIDARG;
 
-        if (m_isDir) {
-            if (index >= m_files.size()) return E_INVALIDARG;
-            fullPath = m_files[index].fullPath;
-            itemIsDir = m_files[index].isDir;
-        } else {
-            fullPath = m_srcPath;
-            itemIsDir = false;
-        }
-
-        if (itemIsDir) return S_OK;
+        const FileItem& item = m_files[index];
+        if (item.isDir) return S_OK;
 
         CFileInStream* stream = new CFileInStream();
-        if (!stream->Open(fullPath.c_str())) {
+        if (!stream->Open(item.fullPath.c_str())) {
             delete stream;
             return HRESULT_FROM_WIN32(GetLastError());
         }
@@ -679,13 +725,10 @@ public:
 
     STDMETHOD(SetOperationResult)(INT32 operationResult) { return S_OK; }
 
-    UINT32 GetItemCount() const { return m_isDir ? (UINT32)m_files.size() : 1; }
+    UINT32 GetItemCount() const { return (UINT32)m_files.size(); }
 
 private:
     LONG m_refCount;
-    std::wstring m_srcPath;
-    std::wstring m_itemName;
-    bool m_isDir;
 
     struct FileItem {
         std::wstring fullPath;
@@ -694,7 +737,7 @@ private:
     };
     std::vector<FileItem> m_files;
 
-    void EnumerateFiles(const std::wstring& basePath, const std::wstring& relPath) {
+    void EnumerateFiles(const std::wstring& basePath, const std::wstring& relBasePath) {
         std::wstring searchPath = basePath + L"\\*";
         WIN32_FIND_DATAW fd;
         HANDLE hFind = FindFirstFileW(searchPath.c_str(), &fd);
@@ -704,12 +747,12 @@ private:
             if (wcscmp(fd.cFileName, L".") == 0 || wcscmp(fd.cFileName, L"..") == 0)
                 continue;
 
-            std::wstring relItemPath = relPath.empty() ? fd.cFileName : relPath + L"\\" + fd.cFileName;
             std::wstring fullItemPath = basePath + L"\\" + fd.cFileName;
+            std::wstring relItemPath = relBasePath + L"\\" + fd.cFileName;
 
             FileItem item;
             item.fullPath = fullItemPath;
-            item.relativePath = m_itemName + L"\\" + relItemPath;
+            item.relativePath = relItemPath;
             item.isDir = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
             m_files.push_back(item);
 
@@ -808,21 +851,29 @@ bool CExplorerCommand::IsArchiveFile(const std::wstring& path)
 
 void CExplorerCommand::GetSelectedItems(IShellItemArray* psiItemArray)
 {
+    m_selectedPaths.clear();
+    m_isArchive = false;
+    m_isDirectory = false;
     if (!psiItemArray) return;
 
     DWORD count = 0;
     psiItemArray->GetCount(&count);
-    if (count > 0) {
+    for (DWORD i = 0; i < count; i++) {
         IShellItem* psi = nullptr;
-        if (SUCCEEDED(psiItemArray->GetItemAt(0, &psi))) {
+        if (SUCCEEDED(psiItemArray->GetItemAt(i, &psi))) {
             PWSTR pszPath = nullptr;
             if (SUCCEEDED(psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath))) {
-                m_selectedPath = pszPath;
-                m_isArchive = IsArchiveFile(m_selectedPath);
+                m_selectedPaths.push_back(pszPath);
                 CoTaskMemFree(pszPath);
             }
             psi->Release();
         }
+    }
+    // Check first file type
+    if (!m_selectedPaths.empty()) {
+        m_isArchive = IsArchiveFile(m_selectedPaths[0]);
+        DWORD attrs = GetFileAttributesW(m_selectedPaths[0].c_str());
+        m_isDirectory = (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY));
     }
 }
 
@@ -897,7 +948,33 @@ IFACEMETHODIMP CExplorerCommand::GetCanonicalName(GUID* pguidCommandName)
 IFACEMETHODIMP CExplorerCommand::GetState(IShellItemArray* psiItemArray, BOOL fOkToBeSlow, EXPCMDSTATE* pCmdState)
 {
     GetSelectedItems(psiItemArray);
-    *pCmdState = ECS_ENABLED;
+
+    // Root menu is always enabled
+    if (m_type == CommandType::Root) {
+        *pCmdState = ECS_ENABLED;
+        return S_OK;
+    }
+
+    // For subcommands, show/hide based on file type
+    // Archive: extract only, Directory: compress only, Regular file: all 4
+    switch (m_type) {
+        case CommandType::ExtractHere:
+        case CommandType::ExtractTo:
+            // Show extract options for archives and regular files (not directories)
+            *pCmdState = (m_isArchive || !m_isDirectory) ? ECS_ENABLED : ECS_HIDDEN;
+            break;
+
+        case CommandType::AddTo7z:
+        case CommandType::AddToZip:
+            // Show compress options for non-archive files (directories and regular files)
+            *pCmdState = m_isArchive ? ECS_HIDDEN : ECS_ENABLED;
+            break;
+
+        default:
+            *pCmdState = ECS_ENABLED;
+            break;
+    }
+
     return S_OK;
 }
 
@@ -923,19 +1000,149 @@ static std::wstring GetParentDir(const std::wstring& path)
     return (pos != std::wstring::npos) ? path.substr(0, pos) : path;
 }
 
-// Helper: Show password input dialog
-static std::wstring ShowPasswordDialog()
+// Password dialog data
+static wchar_t g_passwordBuffer[256] = {};
+static bool g_passwordDialogOK = false;
+
+// Password dialog procedure
+static INT_PTR CALLBACK PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    // Simple input box using Windows API
-    wchar_t password[256] = {};
+    switch (msg) {
+        case WM_INITDIALOG:
+            SetFocus(GetDlgItem(hDlg, 101));  // Focus on edit control
+            return FALSE;
+        case WM_COMMAND:
+            switch (LOWORD(wParam)) {
+                case IDOK:
+                    GetDlgItemTextW(hDlg, 101, g_passwordBuffer, 256);
+                    g_passwordDialogOK = true;
+                    EndDialog(hDlg, IDOK);
+                    return TRUE;
+                case IDCANCEL:
+                    g_passwordDialogOK = false;
+                    EndDialog(hDlg, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+        case WM_CLOSE:
+            g_passwordDialogOK = false;
+            EndDialog(hDlg, IDCANCEL);
+            return TRUE;
+    }
+    return FALSE;
+}
 
-    // Create a simple dialog - for now just return empty
-    // In production, use a proper dialog or TaskDialog
+// Show password input dialog - returns empty string if cancelled
+static std::wstring ShowPasswordInputDialog()
+{
     const auto& strings = GetLocalizedStrings();
+    g_passwordBuffer[0] = L'\0';
+    g_passwordDialogOK = false;
 
-    // Use a simple approach: prompt via a basic dialog
-    // For better UX, could implement a proper dialog resource
-    return L"";  // User needs to add password manually to passwords.txt for now
+    // Create dialog template in memory
+    #pragma pack(push, 4)
+    struct {
+        DLGTEMPLATE dlg;
+        WORD menu, cls, title;
+        wchar_t titleText[32];
+        // Static text
+        WORD itemType1;
+        DLGITEMTEMPLATE item1;
+        WORD item1Class1, item1Class2;
+        wchar_t item1Text[64];
+        WORD item1Extra;
+        // Edit control
+        WORD itemType2;
+        DLGITEMTEMPLATE item2;
+        WORD item2Class1, item2Class2;
+        WORD item2Text;
+        WORD item2Extra;
+        // OK button
+        WORD itemType3;
+        DLGITEMTEMPLATE item3;
+        WORD item3Class1, item3Class2;
+        wchar_t item3Text[8];
+        WORD item3Extra;
+        // Cancel button
+        WORD itemType4;
+        DLGITEMTEMPLATE item4;
+        WORD item4Class1, item4Class2;
+        wchar_t item4Text[8];
+        WORD item4Extra;
+    } dlgTemplate = {};
+    #pragma pack(pop)
+
+    // Dialog
+    dlgTemplate.dlg.style = DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU;
+    dlgTemplate.dlg.dwExtendedStyle = 0;
+    dlgTemplate.dlg.cdit = 4;
+    dlgTemplate.dlg.x = 0;
+    dlgTemplate.dlg.y = 0;
+    dlgTemplate.dlg.cx = 200;
+    dlgTemplate.dlg.cy = 80;
+    dlgTemplate.menu = 0;
+    dlgTemplate.cls = 0;
+    dlgTemplate.title = 0;
+    StringCchCopyW(dlgTemplate.titleText, 32, strings.passwordPromptTitle);
+
+    // Static text (label)
+    dlgTemplate.item1.style = WS_CHILD | WS_VISIBLE | SS_LEFT;
+    dlgTemplate.item1.dwExtendedStyle = 0;
+    dlgTemplate.item1.x = 10;
+    dlgTemplate.item1.y = 10;
+    dlgTemplate.item1.cx = 180;
+    dlgTemplate.item1.cy = 12;
+    dlgTemplate.item1.id = 100;
+    dlgTemplate.item1Class1 = 0xFFFF;
+    dlgTemplate.item1Class2 = 0x0082;  // Static
+    StringCchCopyW(dlgTemplate.item1Text, 64, strings.passwordPromptMessage);
+    dlgTemplate.item1Extra = 0;
+
+    // Edit control
+    dlgTemplate.item2.style = WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | ES_PASSWORD | ES_AUTOHSCROLL;
+    dlgTemplate.item2.dwExtendedStyle = 0;
+    dlgTemplate.item2.x = 10;
+    dlgTemplate.item2.y = 26;
+    dlgTemplate.item2.cx = 180;
+    dlgTemplate.item2.cy = 14;
+    dlgTemplate.item2.id = 101;
+    dlgTemplate.item2Class1 = 0xFFFF;
+    dlgTemplate.item2Class2 = 0x0081;  // Edit
+    dlgTemplate.item2Text = 0;
+    dlgTemplate.item2Extra = 0;
+
+    // OK button
+    dlgTemplate.item3.style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON;
+    dlgTemplate.item3.dwExtendedStyle = 0;
+    dlgTemplate.item3.x = 50;
+    dlgTemplate.item3.y = 50;
+    dlgTemplate.item3.cx = 45;
+    dlgTemplate.item3.cy = 14;
+    dlgTemplate.item3.id = IDOK;
+    dlgTemplate.item3Class1 = 0xFFFF;
+    dlgTemplate.item3Class2 = 0x0080;  // Button
+    StringCchCopyW(dlgTemplate.item3Text, 8, L"OK");
+    dlgTemplate.item3Extra = 0;
+
+    // Cancel button
+    dlgTemplate.item4.style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON;
+    dlgTemplate.item4.dwExtendedStyle = 0;
+    dlgTemplate.item4.x = 105;
+    dlgTemplate.item4.y = 50;
+    dlgTemplate.item4.cx = 45;
+    dlgTemplate.item4.cy = 14;
+    dlgTemplate.item4.id = IDCANCEL;
+    dlgTemplate.item4Class1 = 0xFFFF;
+    dlgTemplate.item4Class2 = 0x0080;  // Button
+    StringCchCopyW(dlgTemplate.item4Text, 8, IsChineseLocale() ? L"\x53D6\x6D88" : L"Cancel");
+    dlgTemplate.item4Extra = 0;
+
+    DialogBoxIndirectW(g_hInst, &dlgTemplate.dlg, NULL, PasswordDlgProc);
+
+    if (g_passwordDialogOK && g_passwordBuffer[0] != L'\0') {
+        return std::wstring(g_passwordBuffer);
+    }
+    return L"";
 }
 
 // Show password result dialog after successful extraction
@@ -969,7 +1176,9 @@ bool CExplorerCommand::ExtractArchive(const std::wstring& archivePath, const std
 
     std::wstring successPassword;
     bool success = false;
+    bool needsPassword = false;
 
+    // Try stored passwords first
     for (const auto& password : passwords) {
         IInArchive* archive = nullptr;
         if (FAILED(lib.CreateInArchive(*formatId, &archive))) continue;
@@ -1004,12 +1213,73 @@ bool CExplorerCommand::ExtractArchive(const std::wstring& archivePath, const std
                 successPassword = password;
             }
             break;
+        } else if (wasPasswordUsed) {
+            needsPassword = true;  // Archive is encrypted
         }
     }
 
-    // Update password count and show dialog if a stored password was used
+    // If no stored password worked and archive needs password, prompt user
+    const auto& strings = GetLocalizedStrings();
+    while (!success && needsPassword) {
+        std::wstring userPassword = ShowPasswordInputDialog();
+        if (userPassword.empty()) {
+            break;  // User cancelled
+        }
+
+        // Try with user-entered password
+        IInArchive* archive = nullptr;
+        if (FAILED(lib.CreateInArchive(*formatId, &archive))) break;
+
+        CFileInStream* inStream = new CFileInStream();
+        if (!inStream->Open(archivePath.c_str())) {
+            inStream->Release();
+            archive->Release();
+            break;
+        }
+
+        UINT64 maxCheckStartPosition = 1 << 22;
+        if (FAILED(archive->Open(inStream, &maxCheckStartPosition, nullptr))) {
+            inStream->Release();
+            archive->Release();
+            break;
+        }
+
+        CExtractCallback* extractCallback = new CExtractCallback(outDir, archive, userPassword);
+        HRESULT hr = archive->Extract(nullptr, (UINT32)-1, 0,
+            static_cast<IArchiveExtractCallback*>(extractCallback));
+
+        extractCallback->Release();
+        archive->Close();
+        archive->Release();
+        inStream->Release();
+
+        if (SUCCEEDED(hr)) {
+            success = true;
+            successPassword = userPassword;
+            // Save new password to file
+            pwdMgr.IncrementCount(userPassword);
+        } else {
+            // Ask if user wants to retry
+            int result = MessageBoxW(NULL, strings.passwordWrongMessage, strings.passwordWrongTitle,
+                                     MB_YESNO | MB_ICONWARNING | MB_SETFOREGROUND);
+            if (result != IDYES) {
+                break;
+            }
+        }
+    }
+
+    // Show password dialog if a password was used successfully
     if (success && !successPassword.empty()) {
-        pwdMgr.IncrementCount(successPassword);
+        // Update count if it was an existing password (already done for new passwords above)
+        // For existing passwords, increment count
+        bool isNewPassword = true;
+        for (const auto& pwd : passwords) {
+            if (pwd == successPassword) {
+                isNewPassword = false;
+                pwdMgr.IncrementCount(successPassword);
+                break;
+            }
+        }
         ShowPasswordResultDialog(successPassword);
     }
 
@@ -1017,13 +1287,25 @@ bool CExplorerCommand::ExtractArchive(const std::wstring& archivePath, const std
 }
 
 // Compress files using 7-Zip SDK
-bool CExplorerCommand::CompressFiles(const std::wstring& srcPath, const std::wstring& archivePath, const GUID& formatId)
+bool CExplorerCommand::CompressFiles(const std::vector<std::wstring>& srcPaths, const std::wstring& archivePath, const GUID& formatId)
 {
     C7ZipLib& lib = C7ZipLib::Instance();
     if (!lib.IsLoaded()) return false;
 
     IOutArchive* archive = nullptr;
     if (FAILED(lib.CreateOutArchive(formatId, &archive))) return false;
+
+    // Set compression properties (required for 7z format)
+    ISetProperties* setProps = nullptr;
+    if (SUCCEEDED(archive->QueryInterface(__uuidof(ISetProperties), (void**)&setProps))) {
+        const wchar_t* names[] = { L"x" };  // Compression level
+        PROPVARIANT values[1];
+        PropVariantInit(&values[0]);
+        values[0].vt = VT_UI4;
+        values[0].ulVal = 5;  // Normal compression level
+        setProps->SetProperties(names, values, 1);
+        setProps->Release();
+    }
 
     CFileOutStream* outStream = new CFileOutStream();
     if (!outStream->Create(archivePath.c_str())) {
@@ -1032,12 +1314,13 @@ bool CExplorerCommand::CompressFiles(const std::wstring& srcPath, const std::wst
         return false;
     }
 
-    std::wstring itemName = GetFileName(srcPath);
-    CUpdateCallback* updateCallback = new CUpdateCallback(srcPath, itemName);
+    CUpdateCallback* updateCallback = new CUpdateCallback(srcPaths);
 
-    HRESULT hr = archive->UpdateItems(outStream, updateCallback->GetItemCount(), updateCallback);
+    HRESULT hr = archive->UpdateItems(outStream, updateCallback->GetItemCount(),
+        static_cast<IArchiveUpdateCallback*>(updateCallback));
 
     updateCallback->Release();
+    outStream->Close();  // Explicitly close before release
     outStream->Release();
     archive->Release();
 
@@ -1107,49 +1390,72 @@ static bool ConfirmOverwrite()
 IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx* pbc)
 {
     GetSelectedItems(psiItemArray);
-    if (m_selectedPath.empty()) return E_FAIL;
+    if (m_selectedPaths.empty()) return E_FAIL;
 
     bool success = false;
+    const std::wstring& firstPath = m_selectedPaths[0];
 
     switch (m_type) {
         case CommandType::ExtractHere:
             // Extract to parent directory using SDK
             {
-                std::wstring outDir = GetParentDir(m_selectedPath);
-                if (CheckOverwriteNeededForArchive(m_selectedPath, outDir)) {
+                std::wstring outDir = GetParentDir(firstPath);
+                if (CheckOverwriteNeededForArchive(firstPath, outDir)) {
                     if (!ConfirmOverwrite()) {
                         return S_OK;  // User cancelled
                     }
                 }
-                success = ExtractArchive(m_selectedPath, outDir);
+                success = ExtractArchive(firstPath, outDir);
             }
             break;
 
         case CommandType::ExtractTo:
             // Extract to subfolder using SDK
             {
-                std::wstring subDir = GetParentDir(m_selectedPath) + L"\\" + GetFileNameWithoutExt(m_selectedPath);
+                std::wstring subDir = GetParentDir(firstPath) + L"\\" + GetFileNameWithoutExt(firstPath);
                 if (GetFileAttributesW(subDir.c_str()) != INVALID_FILE_ATTRIBUTES) {
                     // Subfolder exists, check for overwrites
-                    if (CheckOverwriteNeededForArchive(m_selectedPath, subDir)) {
+                    if (CheckOverwriteNeededForArchive(firstPath, subDir)) {
                         if (!ConfirmOverwrite()) {
                             return S_OK;  // User cancelled
                         }
                     }
                 }
                 CreateDirectoryW(subDir.c_str(), NULL);
-                success = ExtractArchive(m_selectedPath, subDir);
+                success = ExtractArchive(firstPath, subDir);
             }
             break;
 
         case CommandType::AddTo7z:
             // Compress to .7z using SDK
-            success = CompressFiles(m_selectedPath, m_selectedPath + L".7z", CLSID_CFormat7z);
+            {
+                // Archive name: single item uses its name, multiple items use parent folder name
+                std::wstring archivePath;
+                if (m_selectedPaths.size() == 1) {
+                    archivePath = firstPath + L".7z";
+                } else {
+                    std::wstring parentDir = GetParentDir(firstPath);
+                    std::wstring parentName = GetFileName(parentDir);
+                    archivePath = parentDir + L"\\" + parentName + L".7z";
+                }
+                success = CompressFiles(m_selectedPaths, archivePath, CLSID_CFormat7z);
+            }
             break;
 
         case CommandType::AddToZip:
             // Compress to .zip using SDK
-            success = CompressFiles(m_selectedPath, m_selectedPath + L".zip", CLSID_CFormatZip);
+            {
+                // Archive name: single item uses its name, multiple items use parent folder name
+                std::wstring archivePath;
+                if (m_selectedPaths.size() == 1) {
+                    archivePath = firstPath + L".zip";
+                } else {
+                    std::wstring parentDir = GetParentDir(firstPath);
+                    std::wstring parentName = GetFileName(parentDir);
+                    archivePath = parentDir + L"\\" + parentName + L".zip";
+                }
+                success = CompressFiles(m_selectedPaths, archivePath, CLSID_CFormatZip);
+            }
             break;
 
         default:
