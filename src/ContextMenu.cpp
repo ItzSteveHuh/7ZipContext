@@ -29,6 +29,9 @@ static std::wstring g_7zDllPath;  // 7z.dll path
 static std::wstring g_7zFMPath;   // 7zFM.exe path (for icon)
 static std::wstring g_7zGPath;    // 7zG.exe path (for GUI archive dialog)
 
+// Forward declarations
+static std::wstring GetParentDir(const std::wstring& path);
+
 // Detect 7-Zip installation path
 static std::wstring Detect7ZipPath()
 {
@@ -936,26 +939,41 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
     if (m_type == CommandType::AddTo7z || m_type == CommandType::AddToZip) {
         GetSelectedItems(psiItemArray);
         if (!m_selectedPaths.empty()) {
-            std::wstring filePath = m_selectedPaths[0];
+            std::wstring baseName;
             
-            // Extract filename without path
-            size_t lastSlash = filePath.rfind(L'\\');
-            std::wstring fileName = (lastSlash != std::wstring::npos) 
-                ? filePath.substr(lastSlash + 1) 
-                : filePath;
-            
-            // Remove extension
-            size_t lastDot = fileName.rfind(L'.');
-            if (lastDot != std::wstring::npos) {
-                fileName = fileName.substr(0, lastDot);
+            // If multiple items selected, use parent folder name
+            // If single item, use the item's name
+            if (m_selectedPaths.size() > 1) {
+                // Get parent directory name
+                std::wstring parentPath = GetParentDir(m_selectedPaths[0]);
+                size_t lastSlash = parentPath.rfind(L'\\');
+                baseName = (lastSlash != std::wstring::npos) 
+                    ? parentPath.substr(lastSlash + 1) 
+                    : parentPath;
+            } else {
+                // Single item - use its name
+                std::wstring filePath = m_selectedPaths[0];
+                
+                // Extract filename without path
+                size_t lastSlash = filePath.rfind(L'\\');
+                std::wstring fileName = (lastSlash != std::wstring::npos) 
+                    ? filePath.substr(lastSlash + 1) 
+                    : filePath;
+                
+                // Remove extension
+                size_t lastDot = fileName.rfind(L'.');
+                if (lastDot != std::wstring::npos) {
+                    fileName = fileName.substr(0, lastDot);
+                }
+                baseName = fileName;
             }
             
             // Build new title with extension
             static wchar_t dynamicTitle[MAX_PATH];
             if (m_type == CommandType::AddTo7z) {
-                StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.7z", fileName.c_str());
+                StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.7z", baseName.c_str());
             } else {
-                StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.zip", fileName.c_str());
+                StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.zip", baseName.c_str());
             }
             
             return SHStrDupW(dynamicTitle, ppszName);
