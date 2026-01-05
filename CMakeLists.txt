@@ -11,7 +11,7 @@ add_library(7ZipContextMenu SHARED
     src/ContextMenu.def
 )
 
-target_compile_definitions(7ZipContext PRIVATE
+target_compile_definitions(7ZipContextMenu PRIVATE
     UNICODE
     _UNICODE
     WIN32_LEAN_AND_MEAN
@@ -19,10 +19,10 @@ target_compile_definitions(7ZipContext PRIVATE
 
 # Ensure proper UTF-8 handling for source files
 if(MSVC)
-    target_compile_options(7ZipContext PRIVATE /utf-8)
+    target_compile_options(7ZipContextMenu PRIVATE /utf-8)
 endif()
 
-target_link_libraries(7ZipContext PRIVATE
+target_link_libraries(7ZipContextMenu PRIVATE
     shlwapi
     pathcch
     ole32

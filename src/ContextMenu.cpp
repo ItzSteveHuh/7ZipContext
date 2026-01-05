@@ -1062,6 +1062,28 @@ static INT_PTR CALLBACK PasswordDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPAR
     return FALSE;
 }
 
+// Show folder picker dialog and return selected path
+static std::wstring ShowFolderPickerDialog()
+{
+    BROWSEINFOW browseInfo = {};
+    browseInfo.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+    browseInfo.lpszTitle = L"Select folder to extract to:";
+    
+    LPITEMIDLIST pidlFolder = SHBrowseForFolderW(&browseInfo);
+    if (!pidlFolder) {
+        return L"";  // User cancelled
+    }
+    
+    wchar_t path[MAX_PATH];
+    if (!SHGetPathFromIDListW(pidlFolder, path)) {
+        CoTaskMemFree(pidlFolder);
+        return L"";
+    }
+    
+    CoTaskMemFree(pidlFolder);
+    return std::wstring(path);
+}
+
 // Show password input dialog - returns empty string if cancelled
 static std::wstring ShowPasswordInputDialog()
 {
@@ -1530,11 +1552,17 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
             break;
 
         case CommandType::ExtractToCustom:
-            // Extract to custom folder - in a real implementation this would show a folder picker
-            // For now, we'll extract to a default custom location
+            // Extract to custom folder with folder picker dialog
             {
-                std::wstring customDir = GetParentDir(firstPath) + L"\\Extracted";
-                CreateDirectoryW(customDir.c_str(), NULL);
+                std::wstring customDir = ShowFolderPickerDialog();
+                if (customDir.empty()) {
+                    return S_OK;  // User cancelled
+                }
+                if (CheckOverwriteNeededForArchive(firstPath, customDir)) {
+                    if (!ConfirmOverwrite()) {
+                        return S_OK;
+                    }
+                }
                 success = ExtractArchive(firstPath, customDir);
             }
             break;

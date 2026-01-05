@@ -16,7 +16,7 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "[1/2] Removing package..." -ForegroundColor Cyan
-$pkg = Get-AppxPackage -Name "7ZipContext"
+$pkg = Get-AppxPackage -Name "7ZipContextMenu"
 if ($pkg) {
     Remove-AppxPackage -Package $pkg.PackageFullName
     Write-Host "  Package removed." -ForegroundColor Green
@@ -25,13 +25,13 @@ if ($pkg) {
 }
 
 Write-Host "[2/2] Removing certificates..." -ForegroundColor Cyan
-$certUser = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq "CN=7ZipContext" }
+$certUser = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq "CN=7ZipContextMenu" }
 if ($certUser) {
     Remove-Item $certUser.PSPath
     Write-Host "  Certificate removed from CurrentUser."
 }
 
-$certRoot = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=7ZipContext" }
+$certRoot = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq "CN=7ZipContextMenu" }
 if ($certRoot) {
     Remove-Item $certRoot.PSPath
     Write-Host "  Certificate removed from Root."

@@ -11,14 +11,14 @@
   IgnorableNamespaces="uap uap3 uap10 com desktop4 desktop5 rescap">
 
   <Identity
-    Name="7ZipContext"
-    Publisher="CN=7ZipContext"
+    Name="7ZipContextMenu"
+    Publisher="CN=7ZipContextMenu"
     Version="1.0.0.0"
     ProcessorArchitecture="x64" />
 
   <Properties>
     <DisplayName>7-Zip Context</DisplayName>
-    <PublisherDisplayName>7ZipContext</PublisherDisplayName>
+    <PublisherDisplayName>7ZipContextMenu</PublisherDisplayName>
     <Logo>Assets\icon.png</Logo>
     <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
   </Properties>
@@ -34,8 +34,8 @@
   <Applications>
     <Application Id="App" Executable="dummy.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="7-Zip Context"
-        Description="7-Zip Context for Windows 11"
+        DisplayName="7-Zip Context Menu"
+        Description="7-Zip Context Menu for Windows 11"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\icon.png"
         Square44x44Logo="Assets\icon.png"
@@ -45,8 +45,8 @@
         <!-- COM Server registration -->
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:SurrogateServer DisplayName="7-Zip Context Handler">
-              <com:Class Id="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" Path="7ZipContext.dll" ThreadingModel="STA" />
+            <com:SurrogateServer DisplayName="7-Zip Context Menu Handler">
+              <com:Class Id="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" Path="7ZipContextMenu.dll" ThreadingModel="STA" />
             </com:SurrogateServer>
           </com:ComServer>
         </com:Extension>
@@ -55,10 +55,10 @@
         <desktop4:Extension Category="windows.fileExplorerContextMenus">
           <desktop4:FileExplorerContextMenus>
             <desktop5:ItemType Type="*">
-              <desktop5:Verb Id="7ZipContext" Clsid="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" />
+              <desktop5:Verb Id="7ZipContextMenu" Clsid="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" />
             </desktop5:ItemType>
             <desktop5:ItemType Type="Directory">
-              <desktop5:Verb Id="7ZipContextDir" Clsid="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" />
+              <desktop5:Verb Id="7ZipContextMenuDir" Clsid="B8A0B7C1-7C5D-4B3A-9E1F-2A3B4C5D6E7F" />
             </desktop5:ItemType>
           </desktop4:FileExplorerContextMenus>
         </desktop4:Extension>
