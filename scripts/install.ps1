@@ -12,7 +12,7 @@ if (-not $isAdmin) {
 
 # Use script directory as install location
 $InstallDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$DllFile = Join-Path $InstallDir "7ZipContext.dll"
+$DllFile = Join-Path $InstallDir "7ZipContextMenu.dll"
 $ManifestFile = Join-Path $InstallDir "AppxManifest.xml"
 
 Write-Host "========================================" -ForegroundColor Green
@@ -22,7 +22,7 @@ Write-Host ""
 
 # Check required files
 if (-not (Test-Path $DllFile)) {
-    Write-Host "[ERROR] 7ZipContext.dll not found at: $InstallDir" -ForegroundColor Red
+    Write-Host "[ERROR] 7ZipContextMenu.dll not found at: $InstallDir" -ForegroundColor Red
     Write-Host "Please build and install the project first:" -ForegroundColor Yellow
     Write-Host "  cmake --build build --config Release --target install" -ForegroundColor Cyan
     exit 1
