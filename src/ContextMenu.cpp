@@ -984,7 +984,30 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
         case CommandType::Root:             title = L"7-Zip"; break;
         case CommandType::OpenArchive:      title = strings.openArchive; break;
         case CommandType::ExtractHere:      title = strings.extractHere; break;
-        case CommandType::ExtractTo:        title = strings.extractTo; break;
+        case CommandType::ExtractTo:        
+            // Dynamic title with archive name
+            {
+                GetSelectedItems(psiItemArray);
+                if (!m_selectedPaths.empty()) {
+                    std::wstring archivePath = m_selectedPaths[0];
+                    size_t lastSlash = archivePath.rfind(L'\\');
+                    std::wstring fileName = (lastSlash != std::wstring::npos) 
+                        ? archivePath.substr(lastSlash + 1) 
+                        : archivePath;
+                    
+                    // Remove extension
+                    size_t lastDot = fileName.rfind(L'.');
+                    if (lastDot != std::wstring::npos) {
+                        fileName = fileName.substr(0, lastDot);
+                    }
+                    
+                    static wchar_t dynamicTitle[MAX_PATH];
+                    StringCchPrintfW(dynamicTitle, MAX_PATH, L"Extract to %s", fileName.c_str());
+                    return SHStrDupW(dynamicTitle, ppszName);
+                }
+                title = strings.extractTo;
+            }
+            break;
         case CommandType::ExtractToCustom:  title = strings.extractToCustom; break;
         case CommandType::TestArchive:      title = strings.testArchive; break;
         case CommandType::AddToArchive:     title = strings.addToArchive; break;
@@ -1050,8 +1073,8 @@ IFACEMETHODIMP CExplorerCommand::GetState(IShellItemArray* psiItemArray, BOOL fO
         case CommandType::AddTo7z:
         case CommandType::AddToZip:
         case CommandType::CompressAndEmail:
-            // Show compress options for non-archive files (directories and regular files)
-            *pCmdState = m_isArchive ? ECS_HIDDEN : ECS_ENABLED;
+            // Show compress options for all files (both archives and non-archive)
+            *pCmdState = ECS_ENABLED;
             break;
 
         default:
