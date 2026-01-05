@@ -27,6 +27,7 @@ LONG g_cDllRef = 0;
 static std::wstring g_7zExePath;  // 7z.exe path
 static std::wstring g_7zDllPath;  // 7z.dll path
 static std::wstring g_7zFMPath;   // 7zFM.exe path (for icon)
+static std::wstring g_7zGPath;    // 7zG.exe path (for GUI archive dialog)
 
 // Detect 7-Zip installation path
 static std::wstring Detect7ZipPath()
@@ -85,6 +86,7 @@ static void Init7ZipPaths()
         g_7zExePath = basePath + L"\\7z.exe";
         g_7zDllPath = basePath + L"\\7z.dll";
         g_7zFMPath = basePath + L"\\7zFM.exe";
+        g_7zGPath = basePath + L"\\7zG.exe";
     }
     initialized = true;
 }
@@ -119,6 +121,7 @@ static const LocalizedStrings g_stringsEN = {
     .extractTo = L"Extract to Subfolder",
     .extractToCustom = L"Extract to Custom Folder...",
     .testArchive = L"Test Archive",
+    .addToArchive = L"Add to Archive...",
     .addTo7z = L"Add to .7z",
     .addToZip = L"Add to .zip",
     .compressAndEmail = L"Compress and Email",
@@ -142,6 +145,7 @@ static const LocalizedStrings g_stringsCN = {
     .extractTo = L"\x63D0\x53D6\x5230\x5B50\x6587\x4EF6\x5939", // 提取到子文件夹
     .extractToCustom = L"\x63D0\x53D6\x5230\x81EA\x5B9A\x4E49\x6587\x4EF6\x5939", // 提取到自定义文件夹
     .testArchive = L"\x6D4B\x8BD5\x538B\x7F29\x5305",           // 测试压缩包
+    .addToArchive = L"\x6DFB\x52A0\x5230\x538B\x7F29\x5305...",   // 添加到压缩包...
     .addTo7z = L"\x6DFB\x52A0\x5230 .7z",                       // 添加到 .7z
     .addToZip = L"\x6DFB\x52A0\x5230 .zip",                     // 添加到 .zip
     .compressAndEmail = L"\x538B\x7F29\x5E76\x53D1\x9001\x90AE\x4EF6", // 压缩并发送邮件
@@ -928,6 +932,36 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
     const wchar_t* title = L"7-Zip";
     const auto& strings = GetLocalizedStrings();
 
+    // For compression commands, build dynamic title with filename
+    if (m_type == CommandType::AddTo7z || m_type == CommandType::AddToZip) {
+        GetSelectedItems(psiItemArray);
+        if (!m_selectedPaths.empty()) {
+            std::wstring filePath = m_selectedPaths[0];
+            
+            // Extract filename without path
+            size_t lastSlash = filePath.rfind(L'\\');
+            std::wstring fileName = (lastSlash != std::wstring::npos) 
+                ? filePath.substr(lastSlash + 1) 
+                : filePath;
+            
+            // Remove extension
+            size_t lastDot = fileName.rfind(L'.');
+            if (lastDot != std::wstring::npos) {
+                fileName = fileName.substr(0, lastDot);
+            }
+            
+            // Build new title with extension
+            static wchar_t dynamicTitle[MAX_PATH];
+            if (m_type == CommandType::AddTo7z) {
+                StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.7z", fileName.c_str());
+            } else {
+                StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.zip", fileName.c_str());
+            }
+            
+            return SHStrDupW(dynamicTitle, ppszName);
+        }
+    }
+
     switch (m_type) {
         case CommandType::Root:             title = L"7-Zip"; break;
         case CommandType::OpenArchive:      title = strings.openArchive; break;
@@ -935,6 +969,7 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
         case CommandType::ExtractTo:        title = strings.extractTo; break;
         case CommandType::ExtractToCustom:  title = strings.extractToCustom; break;
         case CommandType::TestArchive:      title = strings.testArchive; break;
+        case CommandType::AddToArchive:     title = strings.addToArchive; break;
         case CommandType::AddTo7z:          title = strings.addTo7z; break;
         case CommandType::AddToZip:         title = strings.addToZip; break;
         case CommandType::CompressAndEmail: title = strings.compressAndEmail; break;
@@ -993,6 +1028,7 @@ IFACEMETHODIMP CExplorerCommand::GetState(IShellItemArray* psiItemArray, BOOL fO
             *pCmdState = m_isArchive ? ECS_ENABLED : ECS_HIDDEN;
             break;
 
+        case CommandType::AddToArchive:
         case CommandType::AddTo7z:
         case CommandType::AddToZip:
         case CommandType::CompressAndEmail:
@@ -1582,6 +1618,43 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
             }
             break;
 
+        case CommandType::AddToArchive:
+            // Add to Archive - launch 7zG to show add archive dialog
+            {
+                Init7ZipPaths();
+                std::wstring launchPath = !g_7zGPath.empty() ? g_7zGPath : g_7zFMPath;
+                
+                if (!launchPath.empty()) {
+                    // Get parent directory
+                    std::wstring parentDir = GetParentDir(firstPath);
+                    
+                    STARTUPINFOW si = {};
+                    PROCESS_INFORMATION pi = {};
+                    si.cb = sizeof(si);
+                    
+                    // Build command line: 7zG.exe a -ad "file1" "file2"
+                    wchar_t cmdLine[4096] = {};
+                    StringCchCopyW(cmdLine, 4096, L"\"");
+                    StringCchCatW(cmdLine, 4096, launchPath.c_str());
+                    StringCchCatW(cmdLine, 4096, L"\" a -ad");
+                    
+                    // Add selected files to command
+                    for (const auto& path : m_selectedPaths) {
+                        StringCchCatW(cmdLine, 4096, L" \"");
+                        StringCchCatW(cmdLine, 4096, path.c_str());
+                        StringCchCatW(cmdLine, 4096, L"\"");
+                    }
+                    
+                    CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, parentDir.c_str(), &si, &pi);
+                    if (pi.hProcess) {
+                        CloseHandle(pi.hProcess);
+                        CloseHandle(pi.hThread);
+                    }
+                    success = true;
+                }
+            }
+            break;
+
         case CommandType::OpenArchive:
             // Open archive in 7-Zip File Manager
             {
@@ -1710,7 +1783,8 @@ IFACEMETHODIMP CExplorerCommand::EnumSubCommands(IEnumExplorerCommand** ppEnum)
     // Archive test option
     m_subCommands.push_back(new CExplorerCommand(CommandType::TestArchive));
     
-    // Compression to 7z family
+    // Compression options
+    m_subCommands.push_back(new CExplorerCommand(CommandType::AddToArchive));
     m_subCommands.push_back(new CExplorerCommand(CommandType::AddTo7z));
     m_subCommands.push_back(new CExplorerCommand(CommandType::AddToZip));
     

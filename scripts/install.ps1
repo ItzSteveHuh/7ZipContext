@@ -33,7 +33,7 @@ if (-not (Test-Path $ManifestFile)) {
     exit 1
 }
 
-$CertName = "7ZipContext"
+$CertName = "7ZipContextMenu"
 $CertFile = Join-Path $InstallDir "$CertName.pfx"
 $CertPassword = "7zip"
 
@@ -81,7 +81,7 @@ if (-not (Test-Path $iconFile)) {
 Write-Host "  Done."
 
 Write-Host "[4/5] Removing existing package (if any)..." -ForegroundColor Cyan
-$existingPkg = Get-AppxPackage -Name "7ZipContext" 2>$null
+$existingPkg = Get-AppxPackage -Name "7ZipContextMenu" 2>$null
 if ($existingPkg) {
     Remove-AppxPackage -Package $existingPkg.PackageFullName
     Write-Host "  Existing package removed."

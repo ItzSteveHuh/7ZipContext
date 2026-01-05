@@ -24,6 +24,7 @@ enum class CommandType {
     ExtractToCustom,        // Extract to custom location
     TestArchive,            // Test archive integrity
     // Compression operations
+    AddToArchive,           // Add to Archive with dialog
     AddTo7z,                // Add to .7z
     AddToZip,               // Add to .zip
     CompressAndEmail        // Compress and prepare for email
@@ -36,6 +37,7 @@ struct LocalizedStrings {
     const wchar_t* extractTo;
     const wchar_t* extractToCustom;
     const wchar_t* testArchive;
+    const wchar_t* addToArchive;
     const wchar_t* addTo7z;
     const wchar_t* addToZip;
     const wchar_t* compressAndEmail;
