@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-project(7ZipContext LANGUAGES CXX)
+project(7ZipContextMenu LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Create DLL
-add_library(7ZipContext SHARED
+add_library(7ZipContextMenu SHARED
     src/ContextMenu.cpp
     src/ContextMenu.h
     src/ContextMenu.def
@@ -33,11 +33,11 @@ target_link_libraries(7ZipContext PRIVATE
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install path" FORCE)
 
 # Install DLL and PDB
-install(TARGETS 7ZipContext
+install(TARGETS 7ZipContextMenu
     RUNTIME DESTINATION .
     LIBRARY DESTINATION .
 )
-install(FILES $<TARGET_PDB_FILE:7ZipContext>
+install(FILES $<TARGET_PDB_FILE:7ZipContextMenu>
     DESTINATION .
     OPTIONAL
 )

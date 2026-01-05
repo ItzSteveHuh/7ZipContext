@@ -15,19 +15,30 @@ DEFINE_GUID(CLSID_7ZipContextMenu, 0xb8a0b7c1, 0x7c5d, 0x4b3a, 0x9e, 0x1f, 0x2a,
 
 // Command types
 enum class CommandType {
-    Root,           // Root menu item "7-Zip"
-    ExtractHere,    // Extract Here
-    ExtractTo,      // Extract to subfolder
-    AddTo7z,        // Add to .7z
-    AddToZip        // Add to .zip
+    Root,                   // Root menu item "7-Zip"
+    // Archive management
+    OpenArchive,            // Open archive in 7-Zip
+    // Extract operations
+    ExtractHere,            // Extract Here
+    ExtractTo,              // Extract to subfolder
+    ExtractToCustom,        // Extract to custom location
+    TestArchive,            // Test archive integrity
+    // Compression operations
+    AddTo7z,                // Add to .7z
+    AddToZip,               // Add to .zip
+    CompressAndEmail        // Compress and prepare for email
 };
 
 // Localized strings
 struct LocalizedStrings {
+    const wchar_t* openArchive;
     const wchar_t* extractHere;
     const wchar_t* extractTo;
+    const wchar_t* extractToCustom;
+    const wchar_t* testArchive;
     const wchar_t* addTo7z;
     const wchar_t* addToZip;
+    const wchar_t* compressAndEmail;
     const wchar_t* overwriteTitle;
     const wchar_t* overwriteMessage;
     const wchar_t* passwordTitle;
@@ -36,6 +47,10 @@ struct LocalizedStrings {
     const wchar_t* passwordPromptMessage;
     const wchar_t* passwordWrongTitle;
     const wchar_t* passwordWrongMessage;
+    const wchar_t* testCompleteTitle;
+    const wchar_t* testCompleteMessage;
+    const wchar_t* testFailedTitle;
+    const wchar_t* testFailedMessage;
 };
 
 // Get system language and return appropriate strings
@@ -88,6 +103,9 @@ private:
     bool IsArchiveFile(const std::wstring& path);
     bool ExtractArchive(const std::wstring& archivePath, const std::wstring& outDir);
     bool CompressFiles(const std::vector<std::wstring>& srcPaths, const std::wstring& archivePath, const GUID& formatId);
+    bool TestArchiveIntegrity(const std::wstring& archivePath);
+    bool CompressToFormat(const std::vector<std::wstring>& srcPaths, const std::wstring& basePath, const std::wstring& formatExt, const GUID& formatId);
+    bool OpenFileDialog(std::wstring& outPath);
 };
 
 // Class factory

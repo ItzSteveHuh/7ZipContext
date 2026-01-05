@@ -19,7 +19,7 @@ Supports automatic language switching between English and Chinese.
 ## System Requirements
 
 - Windows 11 (version 21H2 or higher)
-- [Visual Studio 2022 or higher](https://visualstudio.microsoft.com/) or [Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) (C++ desktop development workload required)
+- [Visual Studio 2026 or higher ](https://visualstudio.microsoft.com/) or [Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2026) (C++ desktop development workload required)
 - [CMake](https://cmake.org/download/) 3.20+
 - 7-Zip installed at the default path `C:\Program Files\7-Zip`
 
@@ -37,11 +37,11 @@ Or via GUI: Settings > Privacy & Security > Developer Options > Enable "Develope
 
 ### 2. Build
 
-Open **"Developer Command Prompt for VS 2022"** or **PowerShell**:
+Open **"Developer Command Prompt for VS 2026"** or **PowerShell**:
 
 ```powershell
 # Configure
-cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake -B build -G "Visual Studio 18 2026" -A x64
 
 # Build
 cmake --build build --config Release
@@ -126,7 +126,7 @@ Then rebuild and reinstall.
 - Or sign out and sign back in
 
 ### Build Errors
-- Ensure Visual Studio 2022's C++ desktop development workload is installed
+- Ensure Visual Studio 2026's C++ desktop development workload is installed
 - Ensure CMake is added to PATH
 
 ### PowerShell Script Cannot Run
