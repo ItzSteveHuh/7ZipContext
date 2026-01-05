@@ -36,6 +36,8 @@ static std::wstring Detect7ZipPath()
     const wchar_t* regPaths[] = {
         L"SOFTWARE\\7-Zip",
         L"SOFTWARE\\WOW6432Node\\7-Zip"
+         L"SOFTWARE\\7-Zip-Zstandard",
+        L"SOFTWARE\\WOW6432Node\\7-Zip-Zstandard"
     };
 
     for (const auto& regPath : regPaths) {
@@ -53,8 +55,10 @@ static std::wstring Detect7ZipPath()
     // Try common paths
     const wchar_t* commonPaths[] = {
         L"C:\\Program Files\\7-Zip",
-        L"C:\\Program Files (x86)\\7-Zip"
-    };
+        L"C:\\Program Files (x86)\\7-Zip",
+        L"C:\\Program Files\\7-Zip-Zstandard",
+        L"C:\\Program Files (x86)\\7-Zip-Zstandard"
+        };
 
     for (const auto& path : commonPaths) {
         std::wstring exePath = std::wstring(path) + L"\\7z.exe";
