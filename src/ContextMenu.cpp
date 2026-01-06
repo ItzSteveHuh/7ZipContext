@@ -24,10 +24,16 @@ HINSTANCE g_hInst = NULL;
 LONG g_cDllRef = 0;
 
 // 7-Zip paths - will be detected dynamically
-static std::wstring g_7zExePath;  // 7z.exe path
-static std::wstring g_7zDllPath;  // 7z.dll path
-static std::wstring g_7zFMPath;   // 7zFM.exe path (for icon)
-static std::wstring g_7zGPath;    // 7zG.exe path (for GUI archive dialog)
+static std::wstring g_7zExePath;      // 7z.exe path
+static std::wstring g_7zDllPath;      // 7z.dll path
+static std::wstring g_7zFMPath;       // 7zFM.exe path (for icon)
+static std::wstring g_7zGPath;        // 7zG.exe path (for GUI archive dialog)
+static std::wstring g_7zZSExePath;    // 7z.exe path for Zstandard
+static std::wstring g_7zZSDllPath;    // 7z.dll path for Zstandard
+static std::wstring g_7zZSFMPath;     // 7zFM.exe path for Zstandard
+static std::wstring g_7zZSGPath;      // 7zG.exe path for Zstandard
+static bool g_has7Zip = false;
+static bool g_has7ZipZS = false;
 
 // Forward declarations
 static std::wstring GetParentDir(const std::wstring& path);
@@ -80,17 +86,57 @@ static void Init7ZipPaths()
     static bool initialized = false;
     if (initialized) return;
 
-    std::wstring basePath = Detect7ZipPath();
-    if (!basePath.empty()) {
-        // Remove trailing backslash if present
-        if (basePath.back() == L'\\') {
-            basePath.pop_back();
+    // Detect classic 7-Zip
+    std::wstring basePath = L"";
+    HKEY hKey;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\7-Zip", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        wchar_t path[MAX_PATH];
+        DWORD size = sizeof(path);
+        if (RegQueryValueExW(hKey, L"Path", NULL, NULL, (LPBYTE)path, &size) == ERROR_SUCCESS) {
+            basePath = path;
         }
+        RegCloseKey(hKey);
+    }
+    if (basePath.empty()) {
+        basePath = L"C:\\Program Files\\7-Zip";
+    }
+    if (GetFileAttributesW((basePath + L"\\7z.exe").c_str()) != INVALID_FILE_ATTRIBUTES) {
+        g_has7Zip = true;
         g_7zExePath = basePath + L"\\7z.exe";
         g_7zDllPath = basePath + L"\\7z.dll";
         g_7zFMPath = basePath + L"\\7zFM.exe";
         g_7zGPath = basePath + L"\\7zG.exe";
     }
+
+    // Detect 7-Zip Zstandard
+    std::wstring zsPath = L"";
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\7-Zip-Zstandard", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        wchar_t path[MAX_PATH];
+        DWORD size = sizeof(path);
+        if (RegQueryValueExW(hKey, L"Path", NULL, NULL, (LPBYTE)path, &size) == ERROR_SUCCESS) {
+            zsPath = path;
+        }
+        RegCloseKey(hKey);
+    }
+    if (zsPath.empty()) {
+        zsPath = L"C:\\Program Files\\7-Zip-Zstandard";
+    }
+    if (GetFileAttributesW((zsPath + L"\\7z.exe").c_str()) != INVALID_FILE_ATTRIBUTES) {
+        g_has7ZipZS = true;
+        g_7zZSExePath = zsPath + L"\\7z.exe";
+        g_7zZSDllPath = zsPath + L"\\7z.dll";
+        g_7zZSFMPath = zsPath + L"\\7zFM.exe";
+        g_7zZSGPath = zsPath + L"\\7zG.exe";
+    }
+
+    // If classic 7-Zip not found, use Zstandard paths as primary
+    if (!g_has7Zip && g_has7ZipZS) {
+        g_7zExePath = g_7zZSExePath;
+        g_7zDllPath = g_7zZSDllPath;
+        g_7zFMPath = g_7zZSFMPath;
+        g_7zGPath = g_7zZSGPath;
+    }
+
     initialized = true;
 }
 
@@ -932,75 +978,78 @@ IFACEMETHODIMP_(ULONG) CExplorerCommand::Release()
 // IExplorerCommand
 IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR* ppszName)
 {
-    const wchar_t* title = L"7-Zip";
+    // Dynamic root menu name
+    if (m_type == CommandType::Root) {
+        Init7ZipPaths();
+        if (g_has7Zip && g_has7ZipZS) {
+            // If both are installed, show both as separate root items (handled in EnumSubCommands)
+            // For now, default to classic 7-Zip
+            return SHStrDupW(L"7-Zip / 7-Zip ZS", ppszName);
+        } else if (g_has7ZipZS) {
+            return SHStrDupW(L"7-Zip ZS", ppszName);
+        } else {
+            return SHStrDupW(L"7-Zip", ppszName);
+        }
+    }
+
     const auto& strings = GetLocalizedStrings();
+    
+    // Build dynamic default title based on what's installed
+    const wchar_t* title = L"7-Zip";  // Default fallback
+    if (g_has7Zip && g_has7ZipZS) {
+        title = L"7-Zip / 7-Zip ZS";
+    } else if (g_has7ZipZS) {
+        title = L"7-Zip ZS";
+    } else if (g_has7Zip) {
+        title = L"7-Zip";
+    }
 
     // For compression commands, build dynamic title with filename
     if (m_type == CommandType::AddTo7z || m_type == CommandType::AddToZip) {
         GetSelectedItems(psiItemArray);
         if (!m_selectedPaths.empty()) {
             std::wstring baseName;
-            
             // If multiple items selected, use parent folder name
-            // If single item, use the item's name
+            // If single item, use its name
             if (m_selectedPaths.size() > 1) {
-                // Get parent directory name
                 std::wstring parentPath = GetParentDir(m_selectedPaths[0]);
                 size_t lastSlash = parentPath.rfind(L'\\');
-                baseName = (lastSlash != std::wstring::npos) 
-                    ? parentPath.substr(lastSlash + 1) 
-                    : parentPath;
+                baseName = (lastSlash != std::wstring::npos) ? parentPath.substr(lastSlash + 1) : parentPath;
             } else {
-                // Single item - use its name
                 std::wstring filePath = m_selectedPaths[0];
-                
-                // Extract filename without path
                 size_t lastSlash = filePath.rfind(L'\\');
-                std::wstring fileName = (lastSlash != std::wstring::npos) 
-                    ? filePath.substr(lastSlash + 1) 
-                    : filePath;
-                
-                // Remove extension
+                std::wstring fileName = (lastSlash != std::wstring::npos) ? filePath.substr(lastSlash + 1) : filePath;
                 size_t lastDot = fileName.rfind(L'.');
                 if (lastDot != std::wstring::npos) {
                     fileName = fileName.substr(0, lastDot);
                 }
                 baseName = fileName;
             }
-            
-            // Build new title with extension
             static wchar_t dynamicTitle[MAX_PATH];
             if (m_type == CommandType::AddTo7z) {
                 StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.7z", baseName.c_str());
             } else {
                 StringCchPrintfW(dynamicTitle, MAX_PATH, L"Add to %s.zip", baseName.c_str());
             }
-            
             return SHStrDupW(dynamicTitle, ppszName);
         }
     }
 
     switch (m_type) {
-        case CommandType::Root:             title = L"7-Zip"; break;
         case CommandType::OpenArchive:      title = strings.openArchive; break;
         case CommandType::ExtractHere:      title = strings.extractHere; break;
-        case CommandType::ExtractTo:        
+        case CommandType::ExtractTo:
             // Dynamic title with archive name
             {
                 GetSelectedItems(psiItemArray);
                 if (!m_selectedPaths.empty()) {
                     std::wstring archivePath = m_selectedPaths[0];
                     size_t lastSlash = archivePath.rfind(L'\\');
-                    std::wstring fileName = (lastSlash != std::wstring::npos) 
-                        ? archivePath.substr(lastSlash + 1) 
-                        : archivePath;
-                    
-                    // Remove extension
+                    std::wstring fileName = (lastSlash != std::wstring::npos) ? archivePath.substr(lastSlash + 1) : archivePath;
                     size_t lastDot = fileName.rfind(L'.');
                     if (lastDot != std::wstring::npos) {
                         fileName = fileName.substr(0, lastDot);
                     }
-                    
                     static wchar_t dynamicTitle[MAX_PATH];
                     StringCchPrintfW(dynamicTitle, MAX_PATH, L"Extract to %s", fileName.c_str());
                     return SHStrDupW(dynamicTitle, ppszName);
@@ -1015,7 +1064,6 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
         case CommandType::AddToZip:         title = strings.addToZip; break;
         case CommandType::CompressAndEmail: title = strings.compressAndEmail; break;
     }
-
     return SHStrDupW(title, ppszName);
 }
 
