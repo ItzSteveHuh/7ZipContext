@@ -46,7 +46,7 @@ static std::wstring Detect7ZipPath()
     const wchar_t* regPaths[] = {
         L"SOFTWARE\\7-Zip",
         L"SOFTWARE\\WOW6432Node\\7-Zip"
-         L"SOFTWARE\\7-Zip-Zstandard",
+        L"SOFTWARE\\7-Zip-Zstandard",
         L"SOFTWARE\\WOW6432Node\\7-Zip-Zstandard"
     };
 
@@ -981,11 +981,7 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
     // Dynamic root menu name
     if (m_type == CommandType::Root) {
         Init7ZipPaths();
-        if (g_has7Zip && g_has7ZipZS) {
-            // If both are installed, show both as separate root items (handled in EnumSubCommands)
-            // For now, default to classic 7-Zip
-            return SHStrDupW(L"7-Zip / 7-Zip ZS", ppszName);
-        } else if (g_has7ZipZS) {
+        if (g_has7ZipZS) {
             return SHStrDupW(L"7-Zip ZS", ppszName);
         } else {
             return SHStrDupW(L"7-Zip", ppszName);
@@ -996,9 +992,7 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
     
     // Build dynamic default title based on what's installed
     const wchar_t* title = L"7-Zip";  // Default fallback
-    if (g_has7Zip && g_has7ZipZS) {
-        title = L"7-Zip / 7-Zip ZS";
-    } else if (g_has7ZipZS) {
+    if (g_has7ZipZS) {
         title = L"7-Zip ZS";
     } else if (g_has7Zip) {
         title = L"7-Zip";

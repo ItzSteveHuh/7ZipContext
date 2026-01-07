@@ -4,24 +4,33 @@ Add 7-Zip to Windows 11's **new context menu** (no need to click "Show more opti
 
 ## Features
 
-When right-clicking on files or folders, a **7-Zip** menu appears with the following submenus:
+When right-clicking on files or folders, a **7-Zip** menu appears with the following options:
 
-### Archive Files (.7z, .zip, .rar, etc.)
-- Extract Here
-- Extract to Subfolder
+### For Archive Files (.7z, .zip, .rar, .tar, .gz, .bz2, .xz, .iso, .cab, .arj, .lzh, .tgz, .tbz2, .wim)
+- **Open Archive** - Open in 7-Zip File Manager
+- **Extract Here** - Extract to current directory
+- **Extract to Subfolder** - Extract to a subfolder with archive name
+- **Extract to Custom Folder** - Choose custom extraction location
+- **Test Archive** - Verify archive integrity
+- **Add to Archive** - Launch the 7-Zip add to archive GUI with custom compression options
 
-### Regular Files/Folders
-- Add to .7z
-- Add to .zip
+### For Regular Files/Folders
+- **Add to .7z** - Create a .7z archive
+- **Add to .zip** - Create a .zip archive
+- **Compress and Email** - Create a .zip in temp folder for emailing
 
-Supports automatic language switching between English and Chinese.
+### Additional Features
+- **Password Support** - Automatically handles encrypted archives with password prompts
+- **Password History** - Remembers frequently used passwords for quicker access
+- **Multi-language** - English and Chinese (auto-detected based on system locale)
+- **Automatic Detection** - Detects both 7-Zip and 7-Zip Zstandard installations
 
 ## System Requirements
 
 - Windows 11 (version 21H2 or higher)
 - [Visual Studio 2026 or higher ](https://visualstudio.microsoft.com/) or [Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2026) (C++ desktop development workload required)
 - [CMake](https://cmake.org/download/) 3.20+
-- 7-Zip installed at the default path `C:\Program Files\7-Zip`
+- 7-Zip or 7-Zip Zstandard installed (auto-detects at registry paths or common installation locations)
 
 ## Build and Installation
 
@@ -103,17 +112,13 @@ powershell -ExecutionPolicy Bypass -File .\uninstall.ps1
         └── uninstall.ps1
 ```
 
-## Custom 7-Zip Path
+## Custom 7-Zip Installation Path
 
-If 7-Zip is installed in a different location, modify the paths in `src/ContextMenu.cpp`:
+The extension automatically detects 7-Zip installations by checking:
+1. Registry paths: `HKEY_LOCAL_MACHINE\SOFTWARE\7-Zip-Zstandard` and `HKEY_LOCAL_MACHINE\SOFTWARE\7-Zip`
+2. Common installation paths: `C:\Program Files\7-Zip` and `C:\Program Files (x86)\7-Zip`
 
-```cpp
-static const wchar_t* g_7zPath = L"C:\\Program Files\\7-Zip";
-static const wchar_t* g_7zDll = L"C:\\Program Files\\7-Zip\\7z.dll";
-static const wchar_t* g_7zFM = L"C:\\Program Files\\7-Zip\\7zFM.exe";
-```
-
-Then rebuild and reinstall.
+7-Zip Zstandard is prioritized if both versions are installed. No manual configuration is needed unless 7-Zip is installed to a non-standard location.
 
 ## Troubleshooting
 
@@ -138,9 +143,11 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 ## Technical Details
 
 This project uses:
-- **COM Shell Extension**: Implements `IExplorerCommand` interface with submenu support
+- **COM Shell Extension**: Implements `IExplorerCommand` interface with dynamic submenu support
 - **MSIX Sparse Package**: Allows non-store apps to register in Windows 11's new context menu
-- **7-Zip SDK**: Directly calls 7z.dll for compression/decompression
+- **7-Zip SDK**: Direct integration with 7z.dll for compression/decompression and archive operations
+- **Password Management**: Stores and recalls frequently used passwords for encrypted archives
+- **Dynamic Detection**: Auto-detects 7-Zip installations via registry and file system
 - **Self-signed Certificate**: Automatically created and installed to trusted root certificates
 
 ## License
