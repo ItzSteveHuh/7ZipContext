@@ -9,11 +9,12 @@
            UpgradeCode="B8A0B7C1-7C5D-4B3A-9E1F-000000000001"
            Scope="perMachine"
            Language="2052"
+           Codepage="936"
            Compressed="yes">
 
-    <SummaryInformation Description="7-Zip 右键菜单扩展 for Windows 11" />
+    <SummaryInformation Description="7-Zip Context Menu Extension for Windows 11" />
 
-    <MajorUpgrade DowngradeErrorMessage="已安装更新版本，无法降级安装。" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version is already installed." />
 
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
