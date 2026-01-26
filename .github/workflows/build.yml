@@ -82,20 +82,46 @@ jobs:
       run: |
         $sourceDir = (Get-Location).Path
         $buildDir = Join-Path $sourceDir "build\${{ env.BUILD_TYPE }}"
+        $dllPath = Join-Path $buildDir "7ZipContext.dll"
 
         Write-Host "SourceDir: $sourceDir"
         Write-Host "BuildDir: $buildDir"
-        Write-Host "DLL Path: $buildDir\7ZipContext.dll"
+        Write-Host "DLL Path: $dllPath"
+
+        # Verify DLL exists before WiX build
+        if (-not (Test-Path $dllPath)) {
+            Write-Error "DLL not found at: $dllPath"
+            Write-Host "Contents of build directory:"
+            Get-ChildItem -Path "build" -Recurse | Format-Table Name, Length, FullName
+            exit 1
+        }
+        Write-Host "DLL verified: $(Get-Item $dllPath | Select-Object -ExpandProperty Length) bytes"
+
+        # Verify other source files
+        $manifest = Join-Path $sourceDir "Package\AppxManifest.xml"
+        $dummy = Join-Path $sourceDir "installer\dummy.exe"
+        Write-Host "Manifest exists: $(Test-Path $manifest)"
+        Write-Host "Dummy.exe exists: $(Test-Path $dummy)"
 
         New-Item -ItemType Directory -Path "build\installer" -Force | Out-Null
 
+        # Run WiX with verbose output
+        Write-Host "`n=== Running WiX Build ==="
         wix build installer/7ZipContext.wxs `
           -d "SourceDir=$sourceDir" `
           -d "BuildDir=$buildDir" `
           -ext WixToolset.UI.wixext `
           -ext WixToolset.Util.wixext `
           -arch x64 `
+          -v `
           -o build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi
+
+        # Verify MSI size makes sense (should be > 1.5MB with 2MB DLL compressed)
+        $msiSize = (Get-Item "build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi").Length
+        Write-Host "`nMSI file size: $msiSize bytes"
+        if ($msiSize -lt 1500000) {
+            Write-Warning "MSI file seems too small! DLL may not be included."
+        }
 
     - name: Verify MSI Contents
       shell: pwsh
