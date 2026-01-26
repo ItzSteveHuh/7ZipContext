@@ -36,6 +36,9 @@ struct LocalizedStrings {
     const wchar_t* passwordPromptMessage;
     const wchar_t* passwordWrongTitle;
     const wchar_t* passwordWrongMessage;
+    const wchar_t* progressExtracting;
+    const wchar_t* progressCompressing;
+    const wchar_t* progressCancel;
 };
 
 // Get system language and return appropriate strings
