@@ -121,20 +121,46 @@ jobs:
         $installerDir = (Resolve-Path "installer").Path
         Write-Host "Staging path: $stagingFullPath"
 
+        # Create intermediate folder to inspect cabinet
+        $intermediateDir = "build\wixobj"
+        New-Item -ItemType Directory -Path $intermediateDir -Force | Out-Null
+
         wix build installer/7ZipContext.wxs `
           -d "StagingDir=$stagingFullPath" `
           -d "InstallerDir=$installerDir" `
           -ext WixToolset.UI.wixext `
           -ext WixToolset.Util.wixext `
           -arch x64 `
-          -v `
+          -intermediateFolder $intermediateDir `
           -o build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi
+
+        Write-Host "`nIntermediate files:"
+        Get-ChildItem -Path $intermediateDir -Recurse | Format-Table Name, Length, FullName
+
+        # Check if cab file exists in intermediate folder
+        $cabFiles = Get-ChildItem -Path $intermediateDir -Filter "*.cab" -Recurse
+        if ($cabFiles) {
+            foreach ($cab in $cabFiles) {
+                Write-Host "CAB file: $($cab.FullName), Size: $($cab.Length) bytes"
+            }
+        } else {
+            Write-Host "No CAB files found in intermediate folder"
+        }
 
         # Verify MSI size makes sense (should be > 1.5MB with 2MB DLL compressed)
         $msiSize = (Get-Item "build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi").Length
         Write-Host "`nMSI file size: $msiSize bytes"
         if ($msiSize -lt 1500000) {
             Write-Warning "MSI file seems too small! DLL may not be included."
+
+            # Try to extract and inspect the MSI
+            Write-Host "`nExtracting MSI to inspect contents..."
+            $extractDir = "build\msi_extract"
+            New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
+            msiexec /a "build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi" /qn TARGETDIR="$((Resolve-Path $extractDir).Path)"
+            Start-Sleep -Seconds 5
+            Write-Host "Extracted MSI contents:"
+            Get-ChildItem -Path $extractDir -Recurse | Format-Table Name, Length, FullName
         }
 
     - name: Verify MSI Contents
