@@ -25,8 +25,8 @@
       </Directory>
     </StandardDirectory>
 
-    <!-- Main component group -->
-    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+    <!-- Components placed under explicit directories -->
+    <DirectoryRef Id="INSTALLFOLDER">
 
       <!-- Main DLL -->
       <Component Id="MainDLL" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000002" Bitness="always64">
@@ -53,13 +53,26 @@
         <File Id="UnregisterPS1" Source="$(var.SourceDir)\installer\unregister.ps1" KeyPath="yes" />
       </Component>
 
-    </ComponentGroup>
+    </DirectoryRef>
 
     <!-- Assets -->
-    <ComponentGroup Id="AssetsComponents" Directory="AssetsFolder">
+    <DirectoryRef Id="AssetsFolder">
       <Component Id="IconPNG" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000007" Bitness="always64">
         <File Id="IconFile" Source="$(var.SourceDir)\Package\Assets\icon.png" KeyPath="yes" />
       </Component>
+    </DirectoryRef>
+
+    <!-- Component groups -->
+    <ComponentGroup Id="ProductComponents">
+      <ComponentRef Id="MainDLL" />
+      <ComponentRef Id="AppxManifest" />
+      <ComponentRef Id="DummyExe" />
+      <ComponentRef Id="RegisterScript" />
+      <ComponentRef Id="UnregisterScript" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="AssetsComponents">
+      <ComponentRef Id="IconPNG" />
     </ComponentGroup>
 
     <!-- Custom Actions for registration -->
