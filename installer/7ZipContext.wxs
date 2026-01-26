@@ -6,7 +6,7 @@
   <Package Name="7-Zip Context Menu"
            Manufacturer="7ZipContext"
            Version="1.0.0.0"
-           UpgradeCode="B8A0B7C1-7C5D-4B3A-9E1F-000000000001"
+           UpgradeCode="A1B2C3D4-0000-4B3A-9E1F-000000000001"
            Scope="perMachine"
            Language="2052"
            Codepage="936"
@@ -29,27 +29,27 @@
     <DirectoryRef Id="INSTALLFOLDER">
 
       <!-- Main DLL -->
-      <Component Id="MainDLL" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000002" Bitness="always64">
+      <Component Id="MainDLL" Guid="A1B2C3D4-1111-4B3A-9E1F-000000000002" Bitness="always64">
         <File Id="SevenZipContextDLL" Name="7ZipContext.dll" Source="$(var.StagingDir)\7ZipContext.dll" KeyPath="yes" />
       </Component>
 
       <!-- AppxManifest.xml -->
-      <Component Id="AppxManifest" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000003" Bitness="always64">
+      <Component Id="AppxManifest" Guid="A1B2C3D4-2222-4B3A-9E1F-000000000003" Bitness="always64">
         <File Id="AppxManifestXML" Source="$(var.StagingDir)\AppxManifest.xml" KeyPath="yes" />
       </Component>
 
       <!-- dummy.exe for sparse package -->
-      <Component Id="DummyExe" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000004" Bitness="always64">
+      <Component Id="DummyExe" Guid="A1B2C3D4-3333-4B3A-9E1F-000000000004" Bitness="always64">
         <File Id="DummyEXE" Source="$(var.StagingDir)\dummy.exe" KeyPath="yes" />
       </Component>
 
       <!-- Register script -->
-      <Component Id="RegisterScript" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000005" Bitness="always64">
+      <Component Id="RegisterScript" Guid="A1B2C3D4-4444-4B3A-9E1F-000000000005" Bitness="always64">
         <File Id="RegisterPS1" Source="$(var.StagingDir)\register.ps1" KeyPath="yes" />
       </Component>
 
       <!-- Unregister script -->
-      <Component Id="UnregisterScript" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000006" Bitness="always64">
+      <Component Id="UnregisterScript" Guid="A1B2C3D4-5555-4B3A-9E1F-000000000006" Bitness="always64">
         <File Id="UnregisterPS1" Source="$(var.StagingDir)\unregister.ps1" KeyPath="yes" />
       </Component>
 
@@ -57,7 +57,7 @@
 
     <!-- Assets -->
     <DirectoryRef Id="AssetsFolder">
-      <Component Id="IconPNG" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000007" Bitness="always64">
+      <Component Id="IconPNG" Guid="A1B2C3D4-6666-4B3A-9E1F-000000000007" Bitness="always64">
         <File Id="IconFile" Source="$(var.StagingDir)\Assets\icon.png" KeyPath="yes" />
       </Component>
     </DirectoryRef>
