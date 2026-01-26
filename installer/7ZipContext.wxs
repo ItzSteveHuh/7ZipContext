@@ -83,7 +83,7 @@
                   DllEntry="WixQuietExec64"
                   BinaryRef="Wix4UtilCA_X64"
                   Execute="deferred"
-                  Impersonate="no"
+                  Impersonate="yes"
                   Return="check" />
 
     <CustomAction Id="SetUnregisterCmd" Property="UnregisterSparsePackage"
