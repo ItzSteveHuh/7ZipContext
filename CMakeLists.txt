@@ -384,10 +384,12 @@ install(TARGETS 7ZipContext
     RUNTIME DESTINATION .
     LIBRARY DESTINATION .
 )
-install(FILES $<TARGET_PDB_FILE:7ZipContext>
-    DESTINATION .
-    OPTIONAL
-)
+if(MSVC)
+    install(FILES $<TARGET_PDB_FILE:7ZipContext>
+        DESTINATION .
+        OPTIONAL
+    )
+endif()
 
 install(FILES
     scripts/install.ps1

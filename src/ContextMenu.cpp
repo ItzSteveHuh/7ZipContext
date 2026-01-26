@@ -586,6 +586,10 @@ bool CExplorerCommand::ExtractArchive(const std::wstring& archivePath, const std
     bool success = core.Extract(outDir, correctPassword,
         [&progressDlg, &cancelled](uint64_t completed, uint64_t total) -> bool {
             progressDlg.SetProgress(completed, total);
+            // Handle pause
+            while (progressDlg.IsPaused() && !progressDlg.IsCancelled()) {
+                Sleep(100);
+            }
             if (progressDlg.IsCancelled()) {
                 cancelled = true;
                 return false;
@@ -626,6 +630,10 @@ bool CExplorerCommand::CompressFiles(const std::vector<std::wstring>& srcPaths, 
     bool success = core.Compress(srcPaths, archivePath, format,
         [&progressDlg, &cancelled](uint64_t completed, uint64_t total) -> bool {
             progressDlg.SetProgress(completed, total);
+            // Handle pause
+            while (progressDlg.IsPaused() && !progressDlg.IsCancelled()) {
+                Sleep(100);
+            }
             if (progressDlg.IsCancelled()) {
                 cancelled = true;
                 return false;
