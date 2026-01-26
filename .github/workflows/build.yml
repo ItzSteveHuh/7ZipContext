@@ -64,11 +64,28 @@ jobs:
         $content = $content -replace 'Version="1\.0\.0\.0"', "Version=`"$version`""
         Set-Content $wxsFile $content
 
+    - name: Verify Build Output
+      shell: pwsh
+      run: |
+        $dllPath = "build/${{ env.BUILD_TYPE }}/7ZipContext.dll"
+        if (Test-Path $dllPath) {
+          Write-Host "DLL found: $dllPath"
+          Get-Item $dllPath | Format-List
+        } else {
+          Write-Error "DLL not found at $dllPath"
+          Get-ChildItem -Path "build" -Recurse -Name "*.dll"
+          exit 1
+        }
+
     - name: Build MSI
       shell: pwsh
       run: |
         $sourceDir = (Get-Location).Path
         $buildDir = Join-Path $sourceDir "build\${{ env.BUILD_TYPE }}"
+
+        Write-Host "SourceDir: $sourceDir"
+        Write-Host "BuildDir: $buildDir"
+        Write-Host "DLL Path: $buildDir\7ZipContext.dll"
 
         New-Item -ItemType Directory -Path "build\installer" -Force | Out-Null
 
@@ -79,6 +96,13 @@ jobs:
           -ext WixToolset.Util.wixext `
           -arch x64 `
           -o build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi
+
+    - name: Verify MSI Contents
+      shell: pwsh
+      run: |
+        $msiPath = "build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi"
+        Write-Host "MSI file size:"
+        Get-Item $msiPath | Format-List Name, Length
 
     - name: Upload MSI Artifact
       uses: actions/upload-artifact@v4
