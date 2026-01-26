@@ -131,8 +131,8 @@ jobs:
 
         Write-Host "`nTotal files: $fileCount"
 
-        # Verify critical files exist
-        $view = $database.OpenView("SELECT File FROM File WHERE FileName LIKE '%7ZipContext.dll%'")
+        # Verify critical files exist by checking if DLL was in the list
+        $view = $database.OpenView("SELECT File FROM File WHERE File = 'SevenZipContextDLL'")
         $view.Execute()
         $record = $view.Fetch()
         if ($record -eq $null) {
