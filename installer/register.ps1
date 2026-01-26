@@ -70,8 +70,9 @@ if (-not $cert) {
     Export-PfxCertificate -Cert $cert -FilePath $CertFile -Password $pwd | Out-Null
     Write-Log "Certificate exported to: $CertFile"
 
-    Import-PfxCertificate -FilePath $CertFile -CertStoreLocation Cert:\LocalMachine\Root -Password $pwd | Out-Null
-    Write-Log "Certificate imported to LocalMachine\\Root"
+    # Import to CurrentUser\Root (works without admin in impersonated context)
+    Import-PfxCertificate -FilePath $CertFile -CertStoreLocation Cert:\CurrentUser\Root -Password $pwd | Out-Null
+    Write-Log "Certificate imported to CurrentUser\\Root"
 } else {
     Write-Log "Existing certificate found: $($cert.Thumbprint)"
 }
