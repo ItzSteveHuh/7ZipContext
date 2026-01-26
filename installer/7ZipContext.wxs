@@ -30,27 +30,27 @@
 
       <!-- Main DLL -->
       <Component Id="MainDLL" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000002" Bitness="always64">
-        <File Id="SevenZipContextDLL" Name="7ZipContext.dll" Source="$(var.BuildDir)/7ZipContext.dll" KeyPath="yes" />
+        <File Id="SevenZipContextDLL" Name="7ZipContext.dll" Source="!(bindpath.BuildDir)\7ZipContext.dll" KeyPath="yes" />
       </Component>
 
       <!-- AppxManifest.xml -->
       <Component Id="AppxManifest" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000003" Bitness="always64">
-        <File Id="AppxManifestXML" Source="$(var.SourceDir)/Package/AppxManifest.xml" KeyPath="yes" />
+        <File Id="AppxManifestXML" Source="!(bindpath.SourceDir)\Package\AppxManifest.xml" KeyPath="yes" />
       </Component>
 
       <!-- dummy.exe for sparse package -->
       <Component Id="DummyExe" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000004" Bitness="always64">
-        <File Id="DummyEXE" Source="$(var.SourceDir)/installer/dummy.exe" KeyPath="yes" />
+        <File Id="DummyEXE" Source="!(bindpath.SourceDir)\installer\dummy.exe" KeyPath="yes" />
       </Component>
 
       <!-- Register script -->
       <Component Id="RegisterScript" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000005" Bitness="always64">
-        <File Id="RegisterPS1" Source="$(var.SourceDir)/installer/register.ps1" KeyPath="yes" />
+        <File Id="RegisterPS1" Source="!(bindpath.SourceDir)\installer\register.ps1" KeyPath="yes" />
       </Component>
 
       <!-- Unregister script -->
       <Component Id="UnregisterScript" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000006" Bitness="always64">
-        <File Id="UnregisterPS1" Source="$(var.SourceDir)/installer/unregister.ps1" KeyPath="yes" />
+        <File Id="UnregisterPS1" Source="!(bindpath.SourceDir)\installer\unregister.ps1" KeyPath="yes" />
       </Component>
 
     </DirectoryRef>
@@ -58,7 +58,7 @@
     <!-- Assets -->
     <DirectoryRef Id="AssetsFolder">
       <Component Id="IconPNG" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000007" Bitness="always64">
-        <File Id="IconFile" Source="$(var.SourceDir)/Package/Assets/icon.png" KeyPath="yes" />
+        <File Id="IconFile" Source="!(bindpath.SourceDir)\Package\Assets\icon.png" KeyPath="yes" />
       </Component>
     </DirectoryRef>
 
@@ -135,7 +135,7 @@
 
     <!-- UI -->
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
-    <WixVariable Id="WixUILicenseRtf" Value="$(var.SourceDir)/installer/license.rtf" />
+    <WixVariable Id="WixUILicenseRtf" Value="!(bindpath.SourceDir)\installer\license.rtf" />
 
   </Package>
 </Wix>
