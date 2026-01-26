@@ -107,9 +107,17 @@ jobs:
 
         # Run WiX with verbose output
         Write-Host "`n=== Running WiX Build ==="
+
+        # Use forward slashes for WiX paths
+        $sourceDir = $sourceDir -replace '\\', '/'
+        $buildDir = $buildDir -replace '\\', '/'
+
+        Write-Host "WiX SourceDir: $sourceDir"
+        Write-Host "WiX BuildDir: $buildDir"
+
         wix build installer/7ZipContext.wxs `
-          -d "SourceDir=$sourceDir" `
-          -d "BuildDir=$buildDir" `
+          -define SourceDir="$sourceDir" `
+          -define BuildDir="$buildDir" `
           -ext WixToolset.UI.wixext `
           -ext WixToolset.Util.wixext `
           -arch x64 `
