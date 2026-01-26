@@ -29,7 +29,7 @@
 
       <!-- Main DLL -->
       <Component Id="MainDLL" Guid="B8A0B7C1-7C5D-4B3A-9E1F-000000000002" Bitness="always64">
-        <File Id="7ZipContextDLL" Source="$(BuildDir)\7ZipContext.dll" KeyPath="yes" />
+        <File Id="SevenZipContextDLL" Source="$(BuildDir)\7ZipContext.dll" KeyPath="yes" />
       </Component>
 
       <!-- AppxManifest.xml -->
