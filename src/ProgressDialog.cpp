@@ -19,10 +19,11 @@ static bool g_graphClassRegistered = false;
 // Colors - Windows 11 green theme (exact match)
 static const COLORREF CLR_WINDOW_BG = RGB(255, 255, 255);
 static const COLORREF CLR_GRAPH_BG = RGB(237, 247, 237);        // Lighter green background
-static const COLORREF CLR_GRAPH_BORDER = RGB(200, 220, 200);    // Visible border
+static const COLORREF CLR_GRAPH_BORDER = RGB(180, 180, 180);    // Gray border
 static const COLORREF CLR_GRAPH_GRID = RGB(220, 240, 220);      // Subtle grid
-static const COLORREF CLR_GRAPH_LINE = RGB(56, 142, 60);        // Darker green line
+static const COLORREF CLR_GRAPH_LINE = RGB(56, 142, 60);        // Darker green line (curve)
 static const COLORREF CLR_GRAPH_FILL = RGB(165, 214, 167);      // Soft green fill
+static const COLORREF CLR_SPEED_LINE = RGB(0, 0, 0);            // Black speed line and text
 static const COLORREF CLR_TEXT_PRIMARY = RGB(32, 32, 32);
 static const COLORREF CLR_TEXT_SECONDARY = RGB(102, 102, 102);
 static const COLORREF CLR_BTN_BORDER = RGB(204, 204, 204);
@@ -538,14 +539,14 @@ void CProgressDialog::PaintGraph(HDC hdc, const RECT& rect) {
 
         HFONT hOldFont = (HFONT)SelectObject(hdcMem, m_hSmallFont);
         SetBkMode(hdcMem, TRANSPARENT);
-        SetTextColor(hdcMem, CLR_GRAPH_LINE);
+        SetTextColor(hdcMem, CLR_SPEED_LINE);
 
         // Measure text size
         SIZE textSize;
         GetTextExtentPoint32W(hdcMem, speedText.c_str(), (int)speedText.length(), &textSize);
 
         // Draw horizontal line across full width first
-        HPEN hSpeedLinePen = CreatePen(PS_SOLID, 1, CLR_GRAPH_LINE);
+        HPEN hSpeedLinePen = CreatePen(PS_SOLID, 1, CLR_SPEED_LINE);
         hOldPen = (HPEN)SelectObject(hdcMem, hSpeedLinePen);
         MoveToEx(hdcMem, 1, currentSpeedY, NULL);
         LineTo(hdcMem, width - 1, currentSpeedY);
