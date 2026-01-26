@@ -97,23 +97,33 @@ jobs:
         }
         Write-Host "DLL verified: $(Get-Item $dllPath | Select-Object -ExpandProperty Length) bytes"
 
-        # Verify other source files
-        $manifest = Join-Path $sourceDir "Package\AppxManifest.xml"
-        $dummy = Join-Path $sourceDir "installer\dummy.exe"
-        Write-Host "Manifest exists: $(Test-Path $manifest)"
-        Write-Host "Dummy.exe exists: $(Test-Path $dummy)"
+        # Create staging directory with all files needed for MSI
+        $stagingDir = "build\staging"
+        New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+        New-Item -ItemType Directory -Path "$stagingDir\Assets" -Force | Out-Null
+
+        # Copy all files to staging directory
+        Copy-Item "$buildDir\7ZipContext.dll" "$stagingDir\" -Force
+        Copy-Item "Package\AppxManifest.xml" "$stagingDir\" -Force
+        Copy-Item "installer\dummy.exe" "$stagingDir\" -Force
+        Copy-Item "installer\register.ps1" "$stagingDir\" -Force
+        Copy-Item "installer\unregister.ps1" "$stagingDir\" -Force
+        Copy-Item "Package\Assets\icon.png" "$stagingDir\Assets\" -Force
+
+        Write-Host "`nStaging directory contents:"
+        Get-ChildItem -Path $stagingDir -Recurse | Format-Table Name, Length
 
         New-Item -ItemType Directory -Path "build\installer" -Force | Out-Null
 
-        # Run WiX with verbose output
+        # Run WiX with staging directory as source
         Write-Host "`n=== Running WiX Build ==="
-
-        Write-Host "WiX SourceDir bindpath: $sourceDir"
-        Write-Host "WiX BuildDir bindpath: $buildDir"
+        $stagingFullPath = (Resolve-Path $stagingDir).Path
+        $installerDir = (Resolve-Path "installer").Path
+        Write-Host "Staging path: $stagingFullPath"
 
         wix build installer/7ZipContext.wxs `
-          -bindpath "SourceDir=$sourceDir" `
-          -bindpath "BuildDir=$buildDir" `
+          -d "StagingDir=$stagingFullPath" `
+          -d "InstallerDir=$installerDir" `
           -ext WixToolset.UI.wixext `
           -ext WixToolset.Util.wixext `
           -arch x64 `
