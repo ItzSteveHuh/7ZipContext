@@ -290,8 +290,6 @@ set(PROJECT_SOURCES
     src/ContextMenu.def
     src/SevenZipCore.cpp
     src/SevenZipCore.h
-    src/ProgressDialog.cpp
-    src/ProgressDialog.h
     src/GuidInit.cpp
 )
 
