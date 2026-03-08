@@ -394,7 +394,20 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
         case CommandType::OpenArchive:title = strings.openArchive; break;
         case CommandType::ExtractFiles:title = strings.extractFiles; break;
         case CommandType::ExtractHere:title = strings.extractHere; break;
-        case CommandType::ExtractTo:  title = strings.extractTo; break;
+        case CommandType::ExtractTo:
+        {
+            // Dynamically generate title with archive name
+            GetSelectedItems(psiItemArray);
+            if (!m_selectedPaths.empty()) {
+                std::wstring archiveName = GetFileNameWithoutExt(m_selectedPaths[0]);
+                std::wstring dynamicTitle = IsChineseLocale() ? 
+                    (L"\u63D0\u53D6\u5230 " + archiveName) :  // 提取到 + archivename
+                    (L"Extract to " + archiveName);
+                return SHStrDupW(dynamicTitle.c_str(), ppszName);
+            }
+            title = strings.extractTo;
+            break;
+        }
         case CommandType::AddTo7z:    title = strings.addTo7z; break;
         case CommandType::AddToZip:   title = strings.addToZip; break;
     }
