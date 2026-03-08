@@ -495,11 +495,13 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
 
         case CommandType::ExtractFiles:
             // Match 7-Zip shell behavior for "Extract files...":
-            // x = extract, -o = output directory (shows full path in dialog),
-            // -ad = auto subdirectory with archive name, -an/-ai = archive include switch
+            // x = extract, -o = default output path, -ad = show dialog,
+            // -an/-ai = archive include switch.
+            // Use parent + archive-name subfolder to mirror native 7-Zip field split.
             {
-                std::wstring outDir = GetParentDir(firstPath);
-                success = Run7ZipGui(L"x -o" + QuoteArg(outDir + L"\\") + L" -ad -an -ai!" + QuoteArg(firstPath), outDir);
+                std::wstring parentDir = GetParentDir(firstPath);
+                std::wstring defaultOutDir = parentDir + L"\\" + GetFileNameWithoutExt(firstPath) + L"\\";
+                success = Run7ZipGui(L"x -o" + QuoteArg(defaultOutDir) + L" -ad -an -ai!" + QuoteArg(firstPath), parentDir);
             }
             break;
 
