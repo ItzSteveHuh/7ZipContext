@@ -50,7 +50,83 @@
             </com:SurrogateServer>
           </com:ComServer>
         </com:Extension>
-
+        <!-- File Explorer Context Associations-->
+                    Category="windows.appExecutionAlias"
+            Executable="7zFM.exe"
+            EntryPoint="Windows.FullTrustApplication">
+          <uap3:AppExecutionAlias>
+          <desktop:ExecutionAlias Alias="7zFM.exe" uap8:AllowOverride="true"/>
+          </uap3:AppExecutionAlias>
+        </uap3:Extension>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap3:FileTypeAssociation Name="fileassociations" Parameters="&quot;%1&quot; -open">
+            <uap:Logo>Assets\ArchiveFile.png</uap:Logo>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.001</uap:FileType>
+              <uap:FileType>.7z</uap:FileType>
+              <uap:FileType>.apfs</uap:FileType>
+              <uap:FileType>.arj</uap:FileType>
+              <uap:FileType>.asar</uap:FileType>
+              <uap:FileType>.b64</uap:FileType>
+              <uap:FileType>.br</uap:FileType>
+              <uap:FileType>.bz2</uap:FileType>
+              <uap:FileType>.bzip2</uap:FileType>
+              <uap:FileType>.cab</uap:FileType>
+              <uap:FileType>.cb7</uap:FileType>
+              <uap:FileType>.cbr</uap:FileType>
+              <uap:FileType>.cbz</uap:FileType>
+              <uap:FileType>.cpio</uap:FileType>
+              <uap:FileType>.deb</uap:FileType>
+              <uap:FileType>.dmg</uap:FileType>
+              <uap:FileType>.esd</uap:FileType>
+              <uap:FileType>.fat</uap:FileType>
+              <uap:FileType>.gz</uap:FileType>
+              <uap:FileType>.gzip</uap:FileType>
+              <uap:FileType>.hfs</uap:FileType>
+              <uap:FileType>.hfsx</uap:FileType>
+              <uap:FileType>.iso</uap:FileType>
+              <uap:FileType>.lha</uap:FileType>
+              <uap:FileType>.liz</uap:FileType>
+              <uap:FileType>.lz</uap:FileType>
+              <uap:FileType>.lz4</uap:FileType>
+              <uap:FileType>.lz5</uap:FileType>
+              <uap:FileType>.lzh</uap:FileType>
+              <uap:FileType>.lzma</uap:FileType>
+              <uap:FileType>.lzma2</uap:FileType>
+              <uap:FileType>.ntfs</uap:FileType>
+              <uap:FileType>.rar</uap:FileType>
+              <uap:FileType>.rpm</uap:FileType>
+              <uap:FileType>.squashfs</uap:FileType>
+              <uap:FileType>.swm</uap:FileType>
+              <uap:FileType>.tar</uap:FileType>
+              <uap:FileType>.taz</uap:FileType>
+              <uap:FileType>.tbz</uap:FileType>
+              <uap:FileType>.tbz2</uap:FileType>
+              <uap:FileType>.tgz</uap:FileType>
+              <uap:FileType>.tlz</uap:FileType>
+              <uap:FileType>.tlz4</uap:FileType>
+              <uap:FileType>.tlz5</uap:FileType>
+              <uap:FileType>.tpz</uap:FileType>
+              <uap:FileType>.txz</uap:FileType>
+              <uap:FileType>.tz</uap:FileType>
+              <uap:FileType>.tzst</uap:FileType>
+              <uap:FileType>.tzstd</uap:FileType>
+              <uap:FileType>.vdi</uap:FileType>
+              <uap:FileType>.vhd</uap:FileType>
+              <uap:FileType>.vhdx</uap:FileType>
+              <uap:FileType>.vmdk</uap:FileType>
+              <uap:FileType>.wim</uap:FileType>
+              <uap:FileType>.xar</uap:FileType>
+              <uap:FileType>.xz</uap:FileType>
+              <uap:FileType>.z</uap:FileType>
+              <uap:FileType>.zip</uap:FileType>
+              <uap:FileType>.zipx</uap:FileType>
+              <uap:FileType>.zst</uap:FileType>
+              <uap:FileType>.zstd</uap:FileType>
+              <uap10:FileType>*</uap10:FileType>
+            </uap:SupportedFileTypes>
+          </uap3:FileTypeAssociation>
+        </uap:Extension>
         <!-- File Explorer Context Menu -->
         <desktop4:Extension Category="windows.fileExplorerContextMenus">
           <desktop4:FileExplorerContextMenus>
