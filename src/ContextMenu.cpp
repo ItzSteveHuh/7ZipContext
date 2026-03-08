@@ -401,8 +401,8 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
             if (!m_selectedPaths.empty()) {
                 std::wstring archiveName = GetFileNameWithoutExt(m_selectedPaths[0]);
                 std::wstring dynamicTitle = IsChineseLocale() ? 
-                    (L"\u63D0\u53D6\u5230 " + archiveName) :  // 提取到 + archivename
-                    (L"Extract to " + archiveName);
+                    (L"\u63D0\u53D6\u5230 \"" + archiveName + L"\\\"") :  // 提取到 "archiveName\"
+                    (L"Extract to \"" + archiveName + L"\\\"");
                 return SHStrDupW(dynamicTitle.c_str(), ppszName);
             }
             title = strings.extractTo;
