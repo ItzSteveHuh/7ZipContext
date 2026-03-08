@@ -17,6 +17,7 @@ DEFINE_GUID(CLSID_7ZipContextMenu, 0xb8a0b7c1, 0x7c5d, 0x4b3a, 0x9e, 0x1f, 0x2a,
 enum class CommandType {
     Root,           // Root menu item "7-Zip"
     OpenArchive,    // Open archive in 7-Zip File Manager
+    ExtractFiles,   // Extract files with 7-Zip dialog
     ExtractHere,    // Extract Here
     ExtractTo,      // Extract to subfolder
     AddTo7z,        // Add to .7z
@@ -26,6 +27,7 @@ enum class CommandType {
 // Localized strings
 struct LocalizedStrings {
     const wchar_t* openArchive;
+    const wchar_t* extractFiles;
     const wchar_t* extractHere;
     const wchar_t* extractTo;
     const wchar_t* addTo7z;

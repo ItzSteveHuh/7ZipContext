@@ -18,6 +18,7 @@ static const wchar_t* g_archiveExtensions[] = {
 // Localized strings
 static const LocalizedStrings g_stringsEN = {
     .openArchive = L"Open Archive",
+    .extractFiles = L"Extract Files...",
     .extractHere = L"Extract Here",
     .extractTo = L"Extract to Subfolder",
     .addTo7z = L"Add to .7z",
@@ -26,6 +27,7 @@ static const LocalizedStrings g_stringsEN = {
 
 static const LocalizedStrings g_stringsCN = {
     .openArchive = L"\x6253\x5F00\x538B\x7F29\x5305",         // 打开压缩包
+    .extractFiles = L"\x89E3\x538B\x6587\x4EF6...",          // 解压文件...
     .extractHere = L"\x63D0\x53D6\x5230\x6B64\x5904",           // 提取到此处
     .extractTo = L"\x63D0\x53D6\x5230\x5B50\x6587\x4EF6\x5939", // 提取到子文件夹
     .addTo7z = L"\x6DFB\x52A0\x5230 .7z",                       // 添加到 .7z
@@ -316,6 +318,7 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
     switch (m_type) {
         case CommandType::Root:       title = L"7-Zip"; break;
         case CommandType::OpenArchive:title = strings.openArchive; break;
+        case CommandType::ExtractFiles:title = strings.extractFiles; break;
         case CommandType::ExtractHere:title = strings.extractHere; break;
         case CommandType::ExtractTo:  title = strings.extractTo; break;
         case CommandType::AddTo7z:    title = strings.addTo7z; break;
@@ -365,6 +368,7 @@ IFACEMETHODIMP CExplorerCommand::GetState(IShellItemArray* psiItemArray, BOOL fO
 
     switch (m_type) {
         case CommandType::OpenArchive:
+        case CommandType::ExtractFiles:
             *pCmdState = m_isArchive ? ECS_ENABLED : ECS_HIDDEN;
             break;
 
@@ -420,6 +424,10 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
     switch (m_type) {
         case CommandType::OpenArchive:
             success = OpenArchiveInFileManager(firstPath);
+            break;
+
+        case CommandType::ExtractFiles:
+            success = Run7Zip(L"x " + QuoteArg(firstPath));
             break;
 
         case CommandType::ExtractHere:
@@ -495,6 +503,7 @@ IFACEMETHODIMP CExplorerCommand::EnumSubCommands(IEnumExplorerCommand** ppEnum)
     m_subCommands.clear();
 
     m_subCommands.push_back(new CExplorerCommand(CommandType::OpenArchive));
+    m_subCommands.push_back(new CExplorerCommand(CommandType::ExtractFiles));
     m_subCommands.push_back(new CExplorerCommand(CommandType::ExtractHere));
     m_subCommands.push_back(new CExplorerCommand(CommandType::ExtractTo));
     m_subCommands.push_back(new CExplorerCommand(CommandType::AddTo7z));
