@@ -17,6 +17,7 @@ static const wchar_t* g_archiveExtensions[] = {
 
 // Localized strings
 static const LocalizedStrings g_stringsEN = {
+    .openArchive = L"Open Archive",
     .extractHere = L"Extract Here",
     .extractTo = L"Extract to Subfolder",
     .addTo7z = L"Add to .7z",
@@ -24,6 +25,7 @@ static const LocalizedStrings g_stringsEN = {
 };
 
 static const LocalizedStrings g_stringsCN = {
+    .openArchive = L"\x6253\x5F00\x538B\x7F29\x5305",         // 打开压缩包
     .extractHere = L"\x63D0\x53D6\x5230\x6B64\x5904",           // 提取到此处
     .extractTo = L"\x63D0\x53D6\x5230\x5B50\x6587\x4EF6\x5939", // 提取到子文件夹
     .addTo7z = L"\x6DFB\x52A0\x5230 .7z",                       // 添加到 .7z
@@ -126,6 +128,37 @@ static std::wstring Find7ZipExecutable()
     return L"";
 }
 
+static std::wstring Find7ZipFileManagerExecutable()
+{
+    std::vector<std::wstring> baseDirs;
+
+    std::wstring regPath = GetRegistryString(HKEY_LOCAL_MACHINE, L"SOFTWARE\\7-Zip", L"Path");
+    if (!regPath.empty()) {
+        baseDirs.push_back(TrimTrailingBackslash(regPath));
+    }
+
+    wchar_t pf[MAX_PATH] = {};
+    DWORD pfLen = GetEnvironmentVariableW(L"ProgramFiles", pf, ARRAYSIZE(pf));
+    if (pfLen > 0 && pfLen < ARRAYSIZE(pf)) {
+        baseDirs.push_back(std::wstring(pf) + L"\\7-Zip");
+    }
+
+    wchar_t pfx86[MAX_PATH] = {};
+    DWORD pfx86Len = GetEnvironmentVariableW(L"ProgramFiles(x86)", pfx86, ARRAYSIZE(pfx86));
+    if (pfx86Len > 0 && pfx86Len < ARRAYSIZE(pfx86)) {
+        baseDirs.push_back(std::wstring(pfx86) + L"\\7-Zip");
+    }
+
+    for (const auto& base : baseDirs) {
+        std::wstring fm = base + L"\\7zFM.exe";
+        if (PathExists(fm)) {
+            return fm;
+        }
+    }
+
+    return L"";
+}
+
 static bool Run7Zip(const std::wstring& arguments)
 {
     std::wstring exePath = Find7ZipExecutable();
@@ -158,6 +191,34 @@ static bool Run7Zip(const std::wstring& arguments)
     CloseHandle(pi.hProcess);
 
     return exitCode == 0;
+}
+
+static bool OpenArchiveInFileManager(const std::wstring& archivePath)
+{
+    std::wstring exePath = Find7ZipFileManagerExecutable();
+    if (exePath.empty()) {
+        MessageBoxW(NULL,
+            IsChineseLocale() ? L"未找到 7-Zip 文件管理器。请先安装完整的 7-Zip。" : L"7-Zip File Manager was not found. Please install full 7-Zip.",
+            L"7-Zip Context Menu",
+            MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+        return false;
+    }
+
+    std::wstring cmdLine = QuoteArg(exePath) + L" " + QuoteArg(archivePath);
+    std::vector<wchar_t> mutableCmd(cmdLine.begin(), cmdLine.end());
+    mutableCmd.push_back(L'\0');
+
+    STARTUPINFOW si = {};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi = {};
+
+    if (!CreateProcessW(nullptr, mutableCmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        return false;
+    }
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -254,6 +315,7 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
 
     switch (m_type) {
         case CommandType::Root:       title = L"7-Zip"; break;
+        case CommandType::OpenArchive:title = strings.openArchive; break;
         case CommandType::ExtractHere:title = strings.extractHere; break;
         case CommandType::ExtractTo:  title = strings.extractTo; break;
         case CommandType::AddTo7z:    title = strings.addTo7z; break;
@@ -295,6 +357,10 @@ IFACEMETHODIMP CExplorerCommand::GetState(IShellItemArray* psiItemArray, BOOL fO
     }
 
     switch (m_type) {
+        case CommandType::OpenArchive:
+            *pCmdState = m_isArchive ? ECS_ENABLED : ECS_HIDDEN;
+            break;
+
         case CommandType::ExtractHere:
         case CommandType::ExtractTo:
             *pCmdState = (m_isArchive || !m_isDirectory) ? ECS_ENABLED : ECS_HIDDEN;
@@ -345,6 +411,10 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
     const std::wstring& firstPath = m_selectedPaths[0];
 
     switch (m_type) {
+        case CommandType::OpenArchive:
+            success = OpenArchiveInFileManager(firstPath);
+            break;
+
         case CommandType::ExtractHere:
             {
                 std::wstring outDir = GetParentDir(firstPath);
@@ -417,6 +487,7 @@ IFACEMETHODIMP CExplorerCommand::EnumSubCommands(IEnumExplorerCommand** ppEnum)
     }
     m_subCommands.clear();
 
+    m_subCommands.push_back(new CExplorerCommand(CommandType::OpenArchive));
     m_subCommands.push_back(new CExplorerCommand(CommandType::ExtractHere));
     m_subCommands.push_back(new CExplorerCommand(CommandType::ExtractTo));
     m_subCommands.push_back(new CExplorerCommand(CommandType::AddTo7z));
