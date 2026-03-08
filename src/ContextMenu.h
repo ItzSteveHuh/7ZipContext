@@ -34,8 +34,7 @@ struct LocalizedStrings {
     const wchar_t* addToZip;
 };
 
-// Get system language and return appropriate strings
-bool IsChineseLocale();
+// Get localized strings (English-only currently)
 const LocalizedStrings& GetLocalizedStrings();
 
 // Forward declarations

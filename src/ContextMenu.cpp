@@ -25,25 +25,9 @@ static const LocalizedStrings g_stringsEN = {
     .addToZip = L"Add to .zip"
 };
 
-static const LocalizedStrings g_stringsCN = {
-    .openArchive = L"\x6253\x5F00\x538B\x7F29\x5305",         // 打开压缩包
-    .extractFiles = L"\x89E3\x538B\x6587\x4EF6...",          // 解压文件...
-    .extractHere = L"\x63D0\x53D6\x5230\x6B64\x5904",           // 提取到此处
-    .extractTo = L"\x63D0\x53D6\x5230\x5B50\x6587\x4EF6\x5939", // 提取到子文件夹
-    .addTo7z = L"\x6DFB\x52A0\x5230 .7z",                       // 添加到 .7z
-    .addToZip = L"\x6DFB\x52A0\x5230 .zip"                      // 添加到 .zip
-};
-
-bool IsChineseLocale()
-{
-    LANGID langId = GetUserDefaultUILanguage();
-    WORD primaryLang = PRIMARYLANGID(langId);
-    return (primaryLang == LANG_CHINESE);
-}
-
 const LocalizedStrings& GetLocalizedStrings()
 {
-    return IsChineseLocale() ? g_stringsCN : g_stringsEN;
+    return g_stringsEN;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -197,7 +181,7 @@ static bool Run7Zip(const std::wstring& arguments)
     std::wstring exePath = Find7ZipExecutable();
     if (exePath.empty()) {
         MessageBoxW(NULL,
-            IsChineseLocale() ? L"未找到 7-Zip。请先安装 7-Zip 到默认目录。" : L"7-Zip was not found. Please install 7-Zip in the default location.",
+            L"7-Zip was not found. Please install 7-Zip in the default location.",
             L"7-Zip Context Menu",
             MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
         return false;
@@ -231,7 +215,7 @@ static bool OpenArchiveInFileManager(const std::wstring& archivePath)
     std::wstring exePath = Find7ZipFileManagerExecutable();
     if (exePath.empty()) {
         MessageBoxW(NULL,
-            IsChineseLocale() ? L"未找到 7-Zip 文件管理器。请先安装完整的 7-Zip。" : L"7-Zip File Manager was not found. Please install full 7-Zip.",
+            L"7-Zip File Manager was not found. Please install full 7-Zip.",
             L"7-Zip Context Menu",
             MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
         return false;
@@ -259,7 +243,7 @@ static bool Run7ZipGui(const std::wstring& arguments, const std::wstring& workin
     std::wstring exePath = Find7ZipGuiExecutable();
     if (exePath.empty()) {
         MessageBoxW(NULL,
-            IsChineseLocale() ? L"未找到 7-Zip 图形解压程序 (7zG.exe)。请安装完整的 7-Zip。" : L"7-Zip GUI extractor (7zG.exe) was not found. Please install full 7-Zip.",
+            L"7-Zip GUI extractor (7zG.exe) was not found. Please install full 7-Zip.",
             L"7-Zip Context Menu",
             MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
         return false;
@@ -394,20 +378,7 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
         case CommandType::OpenArchive:title = strings.openArchive; break;
         case CommandType::ExtractFiles:title = strings.extractFiles; break;
         case CommandType::ExtractHere:title = strings.extractHere; break;
-        case CommandType::ExtractTo:
-        {
-            // Dynamically generate title with archive name
-            GetSelectedItems(psiItemArray);
-            if (!m_selectedPaths.empty()) {
-                std::wstring archiveName = GetFileNameWithoutExt(m_selectedPaths[0]);
-                std::wstring dynamicTitle = IsChineseLocale() ? 
-                    (L"\u63D0\u53D6\u5230 \"" + archiveName + L"\\\"") :  // 提取到 "archiveName\"
-                    (L"Extract to \"" + archiveName + L"\\\"");
-                return SHStrDupW(dynamicTitle.c_str(), ppszName);
-            }
-            title = strings.extractTo;
-            break;
-        }
+        case CommandType::ExtractTo:  title = strings.extractTo; break;
         case CommandType::AddTo7z:    title = strings.addTo7z; break;
         case CommandType::AddToZip:   title = strings.addToZip; break;
     }
@@ -514,16 +485,7 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
             break;
 
         case CommandType::ExtractFiles:
-            // Match 7-Zip shell behavior for "Extract files...":
-            // x = extract, -o = default output path, -ad = show dialog,
-            // -an/-ai = archive include switch.
-            // Use parent + archive-name subfolder to mirror native 7-Zip field split.
-            // Launch asynchronously (don't wait) to allow folder access during extraction.
-            {
-                std::wstring parentDir = GetParentDir(firstPath);
-                std::wstring defaultOutDir = parentDir + L"\\" + GetFileNameWithoutExt(firstPath) + L"\\";
-                success = Run7ZipGui(L"x -o" + QuoteArg(defaultOutDir) + L" -ad -an -ai!" + QuoteArg(firstPath), parentDir, false);
-            }
+            success = Run7Zip(L"x " + QuoteArg(firstPath));
             break;
 
         case CommandType::ExtractHere:
