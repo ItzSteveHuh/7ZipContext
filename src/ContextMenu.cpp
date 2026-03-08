@@ -492,7 +492,9 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
             break;
 
         case CommandType::ExtractFiles:
-            success = Run7ZipGui(L"x " + QuoteArg(firstPath));
+            // Match 7-Zip shell behavior for "Extract files...":
+            // x = extract, -ad = show extract dialog, -an/-ai = archive include switch.
+            success = Run7ZipGui(L"x -ad -an -ai!" + QuoteArg(firstPath));
             break;
 
         case CommandType::ExtractHere:
