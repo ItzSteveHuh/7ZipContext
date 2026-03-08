@@ -11,6 +11,7 @@ on:
 
 env:
   BUILD_TYPE: RelWithDebInfo
+  WIX_VERSION: 6.0.2
 
 jobs:
   build:
@@ -48,12 +49,12 @@ jobs:
       run: cmake --build build --config ${{ env.BUILD_TYPE }}
 
     - name: Install WiX Toolset
-      run: dotnet tool install --global wix
+      run: dotnet tool install --global wix --version ${{ env.WIX_VERSION }}
 
     - name: Add WiX Extensions
       run: |
-        wix extension add WixToolset.UI.wixext
-        wix extension add WixToolset.Util.wixext
+        wix extension add -g WixToolset.UI.wixext/${{ env.WIX_VERSION }}
+        wix extension add -g WixToolset.Util.wixext/${{ env.WIX_VERSION }}
 
     - name: Update WiX Version
       shell: pwsh
@@ -128,8 +129,8 @@ jobs:
         wix build installer/7ZipContext.wxs `
           -d "StagingDir=$stagingFullPath" `
           -d "InstallerDir=$installerDir" `
-          -ext WixToolset.UI.wixext `
-          -ext WixToolset.Util.wixext `
+          -ext WixToolset.UI.wixext/${{ env.WIX_VERSION }} `
+          -ext WixToolset.Util.wixext/${{ env.WIX_VERSION }} `
           -arch x64 `
           -intermediateFolder $intermediateDir `
           -o build/installer/7ZipContext-${{ steps.version.outputs.version }}-x64.msi
