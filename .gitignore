@@ -46,3 +46,6 @@ Makefile
 .idea/
 .cache/*
 .claude/settings.local.json
+
+# SpecStory
+.specstory/
