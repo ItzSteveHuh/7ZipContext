@@ -20,7 +20,7 @@ static const LocalizedStrings g_stringsEN = {
     .openArchive = L"Open Archive",
     .extractFiles = L"Extract Files...",
     .extractHere = L"Extract Here",
-    .extractTo = L"Extract to Subfolder",
+    .extractTo = L"Extract to {0}",
     .addTo7z = L"Add to .7z",
     .addToZip = L"Add to .zip"
 };
@@ -370,7 +370,7 @@ IFACEMETHODIMP_(ULONG) CExplorerCommand::Release()
 
 IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR* ppszName)
 {
-    const wchar_t* title = L"7-Zip";
+    std::wstring title = L"7-Zip";
     const auto& strings = GetLocalizedStrings();
 
     switch (m_type) {
@@ -378,12 +378,32 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
         case CommandType::OpenArchive:title = strings.openArchive; break;
         case CommandType::ExtractFiles:title = strings.extractFiles; break;
         case CommandType::ExtractHere:title = strings.extractHere; break;
-        case CommandType::ExtractTo:  title = strings.extractTo; break;
+        case CommandType::ExtractTo:
+        {
+            GetSelectedItems(psiItemArray);
+            if (!m_selectedPaths.empty()) {
+                std::wstring archiveName = GetFileNameWithoutExt(m_selectedPaths[0]);
+                std::wstring archiveDisplay = L"\"" + archiveName + L"\\\"";
+                title = strings.extractTo;
+
+                const std::wstring token = L"{0}";
+                size_t tokenPos = title.find(token);
+                if (tokenPos != std::wstring::npos) {
+                    title.replace(tokenPos, token.length(), archiveDisplay);
+                } else {
+                    title += L" ";
+                    title += archiveDisplay;
+                }
+            } else {
+                title = strings.extractTo;
+            }
+            break;
+        }
         case CommandType::AddTo7z:    title = strings.addTo7z; break;
         case CommandType::AddToZip:   title = strings.addToZip; break;
     }
 
-    return SHStrDupW(title, ppszName);
+    return SHStrDupW(title.c_str(), ppszName);
 }
 
 IFACEMETHODIMP CExplorerCommand::GetIcon(IShellItemArray* psiItemArray, LPWSTR* ppszIcon)
