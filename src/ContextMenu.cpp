@@ -493,12 +493,9 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
 
         case CommandType::ExtractFiles:
             // Match 7-Zip shell behavior for "Extract files...":
-            // x = extract, -ad = show extract dialog, -an/-ai = archive include switch,
-            // -o = set default output directory to archive's parent directory
-            {
-                std::wstring outDir = GetParentDir(firstPath);
-                success = Run7ZipGui(L"x -ad -an -ai!" + QuoteArg(firstPath) + L" -o" + QuoteArg(outDir));
-            }
+            // x = extract, -ad = auto subdirectory (uses archive location + creates subfolder with archive name),
+            // -an/-ai = archive include switch
+            success = Run7ZipGui(L"x -ad -an -ai!" + QuoteArg(firstPath));
             break;
 
         case CommandType::ExtractHere:
