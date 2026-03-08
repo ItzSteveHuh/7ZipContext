@@ -65,6 +65,15 @@ jobs:
         $content = $content -replace 'Version="1\.0\.0\.0"', "Version=`"$version`""
         Set-Content $wxsFile $content
 
+    - name: Update AppxManifest Version
+      shell: pwsh
+      run: |
+        $version = "${{ steps.version.outputs.version }}.0"
+        $manifestFile = "Package/AppxManifest.xml"
+        $content = Get-Content $manifestFile -Raw
+        $content = $content -replace 'Version="1\.0\.0\.0"', "Version=`"$version`""
+        Set-Content $manifestFile $content
+
     - name: Verify Build Output
       shell: pwsh
       run: |
