@@ -327,7 +327,14 @@ IFACEMETHODIMP CExplorerCommand::GetTitle(IShellItemArray* psiItemArray, LPWSTR*
 
 IFACEMETHODIMP CExplorerCommand::GetIcon(IShellItemArray* psiItemArray, LPWSTR* ppszIcon)
 {
-    // Use a generic archive icon from shell32.dll
+    std::wstring fmPath = Find7ZipFileManagerExecutable();
+    if (!fmPath.empty()) {
+        // Use the first icon resource from 7zFM.exe
+        std::wstring iconRef = fmPath + L",0";
+        return SHStrDupW(iconRef.c_str(), ppszIcon);
+    }
+
+    // Fallback when 7-Zip is not installed
     return SHStrDupW(L"shell32.dll,-171", ppszIcon);
 }
 
