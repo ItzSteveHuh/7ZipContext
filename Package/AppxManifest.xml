@@ -128,6 +128,8 @@
             </uap:SupportedFileTypes>
           </uap3:FileTypeAssociation>
         </uap:Extension>
+                </uap3:Extension>
+
         <!-- File Explorer Context Menu -->
         <desktop4:Extension Category="windows.fileExplorerContextMenus">
           <desktop4:FileExplorerContextMenus>
