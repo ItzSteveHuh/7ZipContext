@@ -51,7 +51,8 @@
           </com:ComServer>
         </com:Extension>
         <!-- File Explorer Context Associations-->
-                    Category="windows.appExecutionAlias"
+          <uap3:Extension
+            Category="windows.appExecutionAlias"
             Executable="7zFM.exe"
             EntryPoint="Windows.FullTrustApplication">
           <uap3:AppExecutionAlias>
