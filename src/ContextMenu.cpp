@@ -254,7 +254,7 @@ static bool OpenArchiveInFileManager(const std::wstring& archivePath)
     return true;
 }
 
-static bool Run7ZipGui(const std::wstring& arguments)
+static bool Run7ZipGui(const std::wstring& arguments, const std::wstring& workingDir = L"")
 {
     std::wstring exePath = Find7ZipGuiExecutable();
     if (exePath.empty()) {
@@ -273,7 +273,9 @@ static bool Run7ZipGui(const std::wstring& arguments)
     si.cb = sizeof(si);
     PROCESS_INFORMATION pi = {};
 
-    if (!CreateProcessW(nullptr, mutableCmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+    const wchar_t* lpCurrentDirectory = workingDir.empty() ? nullptr : workingDir.c_str();
+
+    if (!CreateProcessW(nullptr, mutableCmd.data(), nullptr, nullptr, FALSE, 0, nullptr, lpCurrentDirectory, &si, &pi)) {
         return false;
     }
 
@@ -493,9 +495,13 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
 
         case CommandType::ExtractFiles:
             // Match 7-Zip shell behavior for "Extract files...":
-            // x = extract, -ad = auto subdirectory (uses archive location + creates subfolder with archive name),
+            // x = extract, -ad = show dialog with auto subdirectory default,
             // -an/-ai = archive include switch
-            success = Run7ZipGui(L"x -ad -an -ai!" + QuoteArg(firstPath));
+            // Set working directory to archive's parent so dialog defaults to correct location
+            {
+                std::wstring outDir = GetParentDir(firstPath);
+                success = Run7ZipGui(L"x -ad -an -ai!" + QuoteArg(firstPath), outDir);
+            }
             break;
 
         case CommandType::ExtractHere:
