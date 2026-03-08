@@ -254,7 +254,7 @@ static bool OpenArchiveInFileManager(const std::wstring& archivePath)
     return true;
 }
 
-static bool Run7ZipGui(const std::wstring& arguments, const std::wstring& workingDir = L"")
+static bool Run7ZipGui(const std::wstring& arguments, const std::wstring& workingDir = L"", bool waitForCompletion = true)
 {
     std::wstring exePath = Find7ZipGuiExecutable();
     if (exePath.empty()) {
@@ -279,15 +279,22 @@ static bool Run7ZipGui(const std::wstring& arguments, const std::wstring& workin
         return false;
     }
 
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    if (waitForCompletion) {
+        WaitForSingleObject(pi.hProcess, INFINITE);
 
-    DWORD exitCode = 1;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
+        DWORD exitCode = 1;
+        GetExitCodeProcess(pi.hProcess, &exitCode);
 
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
 
-    return exitCode == 0;
+        return exitCode == 0;
+    } else {
+        // Fire-and-forget: let 7-Zip run in background without blocking
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        return true;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -498,10 +505,11 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
             // x = extract, -o = default output path, -ad = show dialog,
             // -an/-ai = archive include switch.
             // Use parent + archive-name subfolder to mirror native 7-Zip field split.
+            // Launch asynchronously (don't wait) to allow folder access during extraction.
             {
                 std::wstring parentDir = GetParentDir(firstPath);
                 std::wstring defaultOutDir = parentDir + L"\\" + GetFileNameWithoutExt(firstPath) + L"\\";
-                success = Run7ZipGui(L"x -o" + QuoteArg(defaultOutDir) + L" -ad -an -ai!" + QuoteArg(firstPath), parentDir);
+                success = Run7ZipGui(L"x -o" + QuoteArg(defaultOutDir) + L" -ad -an -ai!" + QuoteArg(firstPath), parentDir, false);
             }
             break;
 
