@@ -130,6 +130,37 @@ static std::wstring Find7ZipExecutable()
     return L"";
 }
 
+static std::wstring Find7ZipGuiExecutable()
+{
+    std::vector<std::wstring> baseDirs;
+
+    std::wstring regPath = GetRegistryString(HKEY_LOCAL_MACHINE, L"SOFTWARE\\7-Zip", L"Path");
+    if (!regPath.empty()) {
+        baseDirs.push_back(TrimTrailingBackslash(regPath));
+    }
+
+    wchar_t pf[MAX_PATH] = {};
+    DWORD pfLen = GetEnvironmentVariableW(L"ProgramFiles", pf, ARRAYSIZE(pf));
+    if (pfLen > 0 && pfLen < ARRAYSIZE(pf)) {
+        baseDirs.push_back(std::wstring(pf) + L"\\7-Zip");
+    }
+
+    wchar_t pfx86[MAX_PATH] = {};
+    DWORD pfx86Len = GetEnvironmentVariableW(L"ProgramFiles(x86)", pfx86, ARRAYSIZE(pfx86));
+    if (pfx86Len > 0 && pfx86Len < ARRAYSIZE(pfx86)) {
+        baseDirs.push_back(std::wstring(pfx86) + L"\\7-Zip");
+    }
+
+    for (const auto& base : baseDirs) {
+        std::wstring gui = base + L"\\7zG.exe";
+        if (PathExists(gui)) {
+            return gui;
+        }
+    }
+
+    return L"";
+}
+
 static std::wstring Find7ZipFileManagerExecutable()
 {
     std::vector<std::wstring> baseDirs;
@@ -221,6 +252,40 @@ static bool OpenArchiveInFileManager(const std::wstring& archivePath)
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     return true;
+}
+
+static bool Run7ZipGui(const std::wstring& arguments)
+{
+    std::wstring exePath = Find7ZipGuiExecutable();
+    if (exePath.empty()) {
+        MessageBoxW(NULL,
+            IsChineseLocale() ? L"未找到 7-Zip 图形解压程序 (7zG.exe)。请安装完整的 7-Zip。" : L"7-Zip GUI extractor (7zG.exe) was not found. Please install full 7-Zip.",
+            L"7-Zip Context Menu",
+            MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
+        return false;
+    }
+
+    std::wstring cmdLine = QuoteArg(exePath) + L" " + arguments;
+    std::vector<wchar_t> mutableCmd(cmdLine.begin(), cmdLine.end());
+    mutableCmd.push_back(L'\0');
+
+    STARTUPINFOW si = {};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi = {};
+
+    if (!CreateProcessW(nullptr, mutableCmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+        return false;
+    }
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    return exitCode == 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -427,7 +492,7 @@ IFACEMETHODIMP CExplorerCommand::Invoke(IShellItemArray* psiItemArray, IBindCtx*
             break;
 
         case CommandType::ExtractFiles:
-            success = Run7Zip(L"x " + QuoteArg(firstPath));
+            success = Run7ZipGui(L"x " + QuoteArg(firstPath));
             break;
 
         case CommandType::ExtractHere:
